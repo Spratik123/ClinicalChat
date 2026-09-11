@@ -41,7 +41,7 @@ export function Panel({ title, subtitle, actions, flush = false, children }: Pan
           )}
         </Stack>
       )}
-      <Box sx={{ p: flush ? 0 : '18px' }}>{children}</Box>
+      <Box sx={{ p: flush ? 0 : '18px', overflowX: 'auto' }}>{children}</Box>
     </Paper>
   );
 }

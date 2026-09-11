@@ -60,11 +60,10 @@ export function TrendsPanel({ trends }: { trends: IntentConfusionTrend[] }) {
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell>Intent A</TableCell>
-              <TableCell>Intent B</TableCell>
+              <TableCell sx={{ width: '30%' }}>Intent A</TableCell>
+              <TableCell sx={{ width: '30%' }}>Intent B</TableCell>
               <TableCell align="right">Occurrences</TableCell>
               <TableCell>Trend</TableCell>
-              <TableCell sx={{ width: 40 }} />
             </TableRow>
           </TableHead>
           <TableBody>
@@ -83,10 +82,10 @@ export function TrendsPanel({ trends }: { trends: IntentConfusionTrend[] }) {
                     ...(trend.aboveAlertThreshold && { bgcolor: tokens.color.highTint }),
                   }}
                 >
-                  <TableCell>
+                  <TableCell sx={{ wordBreak: 'break-word' }}>
                     <Mono>{trend.intentA}</Mono>
                   </TableCell>
-                  <TableCell>
+                  <TableCell sx={{ wordBreak: 'break-word' }}>
                     <Mono>{trend.intentB}</Mono>
                     {trend.similarity !== undefined && (
                       <Box sx={{ fontSize: 11, color: tokens.color.inkFaint, mt: 0.25 }}>
@@ -112,7 +111,6 @@ export function TrendsPanel({ trends }: { trends: IntentConfusionTrend[] }) {
                       />
                     </Tooltip>
                   </TableCell>
-                  <TableCell sx={{ color: tokens.color.inkFaint, fontSize: 12 }}>View</TableCell>
                 </TableRow>
               );
             })}

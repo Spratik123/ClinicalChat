@@ -1,4 +1,4 @@
-import { Box, Stack } from '@mui/material';
+import { Box } from '@mui/material';
 import { PageHeader } from '@/components/common/PageHeader';
 import { QueryBoundary } from '@/components/common/QueryBoundary';
 import { useReportSummary, useReportTrends, useUnansweredTopics } from '@/api/queries/reports';
@@ -25,16 +25,12 @@ export function ReportsPage() {
 
       <QueryBoundary query={summaryQuery}>{(summary) => <ReportStats summary={summary} />}</QueryBoundary>
 
-      <Stack direction={{ xs: 'column', lg: 'row' }} sx={{ gap: '18px', alignItems: 'flex-start' }}>
-        <Box sx={{ flex: '1 1 0', width: '100%', minWidth: 0 }}>
-          <QueryBoundary query={trendsQuery}>{(trends) => <TrendsPanel trends={trends} />}</QueryBoundary>
-        </Box>
-        <Box sx={{ flex: '1 1 0', width: '100%', minWidth: 0 }}>
-          <QueryBoundary query={unansweredQuery}>
-            {(topics) => <UnansweredPanel topics={topics} />}
-          </QueryBoundary>
-        </Box>
-      </Stack>
+      <Box sx={{ width: '100%', minWidth: 0 }}>
+        <QueryBoundary query={trendsQuery}>{(trends) => <TrendsPanel trends={trends} />}</QueryBoundary>
+      </Box>
+      <Box sx={{ width: '100%', minWidth: 0 }}>
+        <QueryBoundary query={unansweredQuery}>{(topics) => <UnansweredPanel topics={topics} />}</QueryBoundary>
+      </Box>
     </>
   );
 }

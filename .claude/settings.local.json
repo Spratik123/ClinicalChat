@@ -67,11 +67,37 @@
       "Bash(node configcheck2.mjs)",
       "Bash(npx --yes kill-port 5280)",
       "Bash(netstat -ano)",
-      "Bash(powershell -Command \"Get-Process -Id 5124 | Select-Object Id,ProcessName,Path\")"
+      "Bash(powershell -Command \"Get-Process -Id 5124 | Select-Object Id,ProcessName,Path\")",
+      "Bash(ls \"C:\\\\Users\\\\PratikSakalkar\\\\AppData\\\\Local\\\\Temp\\\\claude\" 2>/dev/null | head -5; echo \"---\"; find / -maxdepth 6 -iname \"scratchpad\" -path \"*ClinicalChat*\" 2>/dev/null)",
+      "Read(//c/Users/PratikSakalkar/AppData/Local/Temp/claude/**)",
+      "Read(//e//**)",
+      "Bash(mkdir -p /tmp/cc_demo_check && echo ok)",
+      "Bash(mkdir -p \"C:/Users/PratikSakalkar/AppData/Local/Temp/cc_demo_check\" && echo ok)",
+      "Bash(node turncheck.mjs)",
+      "Read(//c/Users/PratikSakalkar/AppData/Local/Temp/cc_demo_check/**)",
+      "Bash(node turncheck2.mjs)",
+      "Bash(node refreshcheck.mjs)",
+      "Bash(node reportsdebug.mjs)",
+      "Bash(node reportscheck2.mjs)",
+      "Bash(mkdir -p \"C:/Users/PratikSakalkar/AppData/Local/Temp/cc_demo_check2\" && echo ok)",
+      "Bash(node reportscheck3.mjs)",
+      "Read(//c/Users/PratikSakalkar/AppData/Local/Temp/cc_demo_check2/**)",
+      "Bash(npm i *)",
+      "Bash(rm -rf \"C:/Users/PratikSakalkar/AppData/Local/Temp/cc_demo_check2\" 2>/dev/null; echo done)",
+      "Bash(mkdir -p \"C:/Users/PratikSakalkar/AppData/Local/Temp/cc_demo_check3\")",
+      "Read(//c/Users/PratikSakalkar/AppData/Local/Temp/**)",
+      "Bash(node railcheck.mjs)",
+      "Read(//c/Users/PratikSakalkar/AppData/Local/Temp/cc_demo_check3/**)",
+      "Bash(rm -rf \"C:/Users/PratikSakalkar/AppData/Local/Temp/cc_demo_check3\" 2>/dev/null; echo done)"
     ],
     "additionalDirectories": [
       "C:\\Users\\PratikSakalkar\\AppData\\Local\\Temp\\claude\\e--Antigravity-ClinicalChat\\717a1cc3-2df3-4db3-a126-79a0f8f6eb8b\\scratchpad",
-      "\\dev"
+      "\\dev",
+      "\\tmp",
+      "C:\\Users\\PratikSakalkar\\AppData\\Local\\Temp\\cc_demo_check",
+      "C:\\Users\\PratikSakalkar\\AppData\\Local\\Temp",
+      "C:\\Users\\PratikSakalkar\\AppData\\Local\\Temp\\cc_demo_check2",
+      "C:\\Users\\PratikSakalkar\\AppData\\Local\\Temp\\cc_demo_check3"
     ]
   }
 }

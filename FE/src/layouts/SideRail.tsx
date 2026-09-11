@@ -18,6 +18,9 @@ import { usePermission, useAuth } from '@/auth/useAuth';
 import { Link as RouterLink } from 'react-router';
 import { tokens } from '@/theme/tokens';
 
+/** Toggle the workspace-switcher block below the brand mark — see its usage for why. */
+const SHOW_WORKSPACE_SWITCHER = false;
+
 const icons: Record<NavIcon, typeof DashboardOutlinedIcon> = {
   dashboard: DashboardOutlinedIcon,
   queue: PlaylistAddCheckOutlinedIcon,
@@ -105,48 +108,53 @@ export function SideRail({ queueDepth, safetyOpen = 0, reviewContext }: SideRail
           Chat auditing its own bot), so there is nothing behind the chevron
           yet. Kept as a static display so the chrome matches the client's
           reference without implying a multi-workspace capability we haven't
-          built. */}
-      <Tooltip title="Single workspace — switching isn't wired up yet" placement="right">
-        <Stack
-          direction="row"
-          sx={{
-            alignItems: 'center',
-            gap: '9px',
-            p: '9px 10px',
-            mb: '14px',
-            borderRadius: '8px',
-            bgcolor: tokens.rail.bgRaised,
-            border: `1px solid ${tokens.rail.border}`,
-            cursor: 'default',
-          }}
-        >
-          <Box
+          built. Hidden for the client demo (SHOW_WORKSPACE_SWITCHER) since a
+          single-workspace product showing a workspace switcher raises
+          questions we can't answer yet — flip the flag back on when
+          multi-workspace is actually on the roadmap to discuss. */}
+      {SHOW_WORKSPACE_SWITCHER && (
+        <Tooltip title="Single workspace — switching isn't wired up yet" placement="right">
+          <Stack
+            direction="row"
             sx={{
-              width: 26,
-              height: 26,
-              flex: '0 0 26px',
-              borderRadius: '6px',
-              bgcolor: tokens.color.accent,
-              color: '#fff',
-              display: 'grid',
-              placeItems: 'center',
-              fontSize: 11,
-              fontWeight: 700,
+              alignItems: 'center',
+              gap: '9px',
+              p: '9px 10px',
+              mb: '14px',
+              borderRadius: '8px',
+              bgcolor: tokens.rail.bgRaised,
+              border: `1px solid ${tokens.rail.border}`,
+              cursor: 'default',
             }}
           >
-            CC
-          </Box>
-          <Box sx={{ overflow: 'hidden', flex: 1 }}>
-            <Typography noWrap sx={{ fontSize: 12.5, fontWeight: 600, color: tokens.rail.textActive }}>
-              Clinic Chat
-            </Typography>
-            <Typography noWrap sx={{ fontSize: 11, color: tokens.rail.textMuted }}>
-              Clinical assistant · audit
-            </Typography>
-          </Box>
-          <UnfoldMoreIcon sx={{ fontSize: 15, color: tokens.rail.textMuted, flex: '0 0 auto' }} />
-        </Stack>
-      </Tooltip>
+            <Box
+              sx={{
+                width: 26,
+                height: 26,
+                flex: '0 0 26px',
+                borderRadius: '6px',
+                bgcolor: tokens.color.accent,
+                color: '#fff',
+                display: 'grid',
+                placeItems: 'center',
+                fontSize: 11,
+                fontWeight: 700,
+              }}
+            >
+              CC
+            </Box>
+            <Box sx={{ overflow: 'hidden', flex: 1 }}>
+              <Typography noWrap sx={{ fontSize: 12.5, fontWeight: 600, color: tokens.rail.textActive }}>
+                Clinic Chat
+              </Typography>
+              <Typography noWrap sx={{ fontSize: 11, color: tokens.rail.textMuted }}>
+                Clinical assistant · audit
+              </Typography>
+            </Box>
+            <UnfoldMoreIcon sx={{ fontSize: 15, color: tokens.rail.textMuted, flex: '0 0 auto' }} />
+          </Stack>
+        </Tooltip>
+      )}
 
       {/* Navigation — the only part of the rail that scrolls. `minHeight: 0`
           is required for a flex child's `overflowY: auto` to actually engage
