@@ -1,0 +1,1292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Clinic Chat Audit — Product Walkthrough</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600;6..72,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ============================= TOKENS ============================= */
+:root{
+  --bg:#F4F5F7;
+  --surface:#FFFFFF;
+  --surface-sunk:#F8F9FB;
+  --ink:#161B22;
+  --ink-muted:#5B6472;
+  --ink-faint:#8891A0;
+  --border:#E1E4E9;
+  --border-strong:#C8CDD6;
+  --accent:#1F3864;       /* deep navy — primary brand/action */
+  --accent-ink:#152847;
+  --accent-tint:#E7ECF5;
+  --teal:#2E6E62;         /* secondary action / links */
+  --teal-tint:#E4EFEC;
+  --safety:#B3261E;       /* reserved EXCLUSIVELY for STOP/escalation */
+  --safety-tint:#FBE9E8;
+  --high:#B4530A;
+  --high-tint:#FBEEE1;
+  --medium:#93720C;
+  --medium-tint:#FBF3D8;
+  --low:#5B6472;
+  --low-tint:#EEF0F3;
+  --success:#2E7D5B;
+  --success-tint:#E4F2EB;
+  --focus:#2E6E62;
+  --radius:6px;
+  --shadow-pop: 0 8px 28px rgba(20,24,32,0.14), 0 2px 6px rgba(20,24,32,0.08);
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  font-family:'Inter',sans-serif;
+  background:var(--bg);
+  color:var(--ink);
+  font-size:14px;
+  line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3,h4{font-family:'Newsreader',serif;font-weight:600;color:var(--ink);margin:0;}
+.mono{font-family:'IBM Plex Mono',monospace;}
+a{color:var(--teal);}
+button{font-family:inherit;cursor:pointer;}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px;}
+.hidden{display:none !important;}
+
+/* ============================= LOGIN ============================= */
+#login-screen{
+  min-height:100vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:
+    radial-gradient(circle at 18% 20%, rgba(31,56,100,0.08), transparent 45%),
+    radial-gradient(circle at 82% 78%, rgba(46,110,98,0.08), transparent 45%),
+    var(--bg);
+  padding:24px;
+}
+.login-card{
+  width:100%;
+  max-width:400px;
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:10px;
+  padding:40px 36px 32px;
+  box-shadow:0 20px 50px rgba(22,27,34,0.08);
+}
+.login-mark{
+  display:flex;align-items:center;gap:10px;margin-bottom:28px;
+}
+.login-mark .dot{
+  width:11px;height:11px;border-radius:50%;
+  background:var(--accent);
+  box-shadow:0 0 0 3px var(--accent-tint);
+}
+.login-mark span{font-family:'IBM Plex Mono',monospace;font-size:12.5px;letter-spacing:.02em;color:var(--ink-muted);}
+.login-card h1{font-size:26px;margin-bottom:6px;}
+.login-sub{color:var(--ink-muted);font-size:13.5px;margin-bottom:28px;}
+.field{margin-bottom:16px;}
+.field label{display:block;font-size:12.5px;font-weight:600;color:var(--ink-muted);margin-bottom:6px;}
+.field input,.field select,.field textarea{
+  width:100%;padding:10px 12px;border:1px solid var(--border-strong);border-radius:5px;
+  font-family:'Inter',sans-serif;font-size:14px;background:var(--surface);color:var(--ink);
+}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--teal);}
+.field-hint{font-size:12px;color:var(--ink-faint);margin-top:5px;}
+.mfa-row{display:flex;gap:8px;margin:18px 0 22px;}
+.mfa-row input{width:40px;height:46px;text-align:center;font-size:18px;font-family:'IBM Plex Mono',monospace;border:1px solid var(--border-strong);border-radius:5px;}
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:7px;
+  padding:10px 16px;border-radius:5px;border:1px solid transparent;
+  font-size:13.5px;font-weight:600;transition:background .12s,border-color .12s;
+}
+.btn-primary{background:var(--accent);color:#fff;}
+.btn-primary:hover{background:var(--accent-ink);}
+.btn-block{width:100%;}
+.btn-ghost{background:transparent;border-color:var(--border-strong);color:var(--ink);}
+.btn-ghost:hover{background:var(--surface-sunk);}
+.btn-teal{background:var(--teal);color:#fff;}
+.btn-teal:hover{background:#255a50;}
+.btn-danger{background:#fff;border-color:var(--high);color:var(--high);}
+.btn-danger:hover{background:var(--high-tint);}
+.btn-safety{background:var(--safety);color:#fff;}
+.btn-safety:hover{background:#8f1f19;}
+.btn-sm{padding:6px 11px;font-size:12.5px;}
+.btn:disabled{opacity:.45;cursor:not-allowed;}
+.login-foot{margin-top:22px;font-size:12px;color:var(--ink-faint);text-align:center;line-height:1.6;}
+
+/* ============================= APP SHELL ============================= */
+#app{display:flex;min-height:100vh;}
+.rail{
+  width:216px;flex:0 0 216px;background:var(--accent);color:#EEF1F7;
+  display:flex;flex-direction:column;padding:20px 14px;
+}
+.rail-brand{display:flex;align-items:center;gap:9px;padding:2px 8px 22px;}
+.rail-brand .dot{width:10px;height:10px;border-radius:50%;background:#fff;}
+.rail-brand-text{font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.02em;color:#C9D2E4;}
+.rail-brand-text b{color:#fff;font-weight:600;}
+.rail nav{display:flex;flex-direction:column;gap:2px;}
+.rail-group-label{font-size:11px;color:#93A2C0;margin:16px 10px 6px;font-weight:600;}
+.rail-item{
+  display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:5px;
+  color:#D6DCEA;text-decoration:none;font-size:13.5px;font-weight:500;
+  border:1px solid transparent;background:transparent;width:100%;text-align:left;
+}
+.rail-item:hover{background:rgba(255,255,255,0.07);color:#fff;}
+.rail-item.active{background:rgba(255,255,255,0.14);color:#fff;border-color:rgba(255,255,255,0.12);}
+.rail-icon{width:16px;height:16px;flex:0 0 16px;opacity:.9;}
+.rail-badge{
+  margin-left:auto;background:var(--safety);color:#fff;font-size:10.5px;font-weight:700;
+  padding:1px 6px;border-radius:20px;font-family:'IBM Plex Mono',monospace;
+}
+.rail-foot{margin-top:auto;padding-top:16px;border-top:1px solid rgba(255,255,255,0.12);}
+.rail-user{display:flex;align-items:center;gap:9px;padding:8px;}
+.rail-avatar{width:28px;height:28px;border-radius:50%;background:#3E5A8A;color:#fff;display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:700;flex:0 0 28px;}
+.rail-user-meta{overflow:hidden;}
+.rail-user-name{font-size:12.5px;font-weight:600;color:#fff;white-space:nowrap;}
+.rail-user-role{font-size:11px;color:#A9B4CC;}
+
+.main{flex:1;display:flex;flex-direction:column;min-width:0;}
+.topbar{
+  height:58px;flex:0 0 58px;background:var(--surface);border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;padding:0 24px;
+}
+.topbar-title{display:flex;align-items:baseline;gap:10px;}
+.topbar-title h2{font-size:18px;}
+.topbar-title .crumb{font-size:12.5px;color:var(--ink-faint);}
+.topbar-right{display:flex;align-items:center;gap:14px;}
+.env-chip{
+  font-family:'IBM Plex Mono',monospace;font-size:11px;padding:3px 9px;border-radius:20px;
+  background:var(--teal-tint);color:var(--teal);border:1px solid #CFE3DD;
+}
+.views{flex:1;overflow-y:auto;padding:26px 28px 60px;}
+.view{max-width:1180px;}
+.view-head{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:20px;}
+.view-head h1{font-size:24px;}
+.view-head p{color:var(--ink-muted);font-size:13.5px;margin-top:5px;max-width:640px;}
+
+/* ============================= COMMON PANELS ============================= */
+.panel{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+  margin-bottom:18px;
+}
+.panel-head{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 18px;border-bottom:1px solid var(--border);
+}
+.panel-head h3{font-size:15px;}
+.panel-head .sub{font-size:12px;color:var(--ink-faint);margin-top:2px;font-family:'Inter',sans-serif;font-weight:400;}
+.panel-body{padding:18px;}
+.panel-body.flush{padding:0;}
+
+.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px;}
+.stat-card{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+  padding:16px 18px;
+}
+.stat-label{font-size:12px;color:var(--ink-muted);margin-bottom:8px;}
+.stat-value{font-family:'Newsreader',serif;font-size:28px;font-weight:600;line-height:1;}
+.stat-value.safety{color:var(--safety);}
+.stat-foot{font-size:12px;color:var(--ink-faint);margin-top:8px;}
+.stat-foot.up{color:var(--success);}
+.stat-foot.warn{color:var(--high);}
+
+table{width:100%;border-collapse:collapse;}
+th{
+  text-align:left;font-size:11.5px;color:var(--ink-muted);font-weight:600;
+  padding:9px 16px;border-bottom:1px solid var(--border);background:var(--surface-sunk);
+  white-space:nowrap;
+}
+td{padding:12px 16px;border-bottom:1px solid var(--border);font-size:13px;vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+tr.row-clickable{cursor:pointer;}
+tr.row-clickable:hover td{background:var(--surface-sunk);}
+tr.row-safety td{background:var(--safety-tint);}
+tr.row-safety:hover td{background:#F7DEDC;}
+
+.badge{
+  display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;
+  padding:3px 9px;border-radius:20px;font-family:'Inter',sans-serif;white-space:nowrap;
+}
+.badge-safety{background:var(--safety);color:#fff;}
+.badge-high{background:var(--high-tint);color:var(--high);}
+.badge-medium{background:var(--medium-tint);color:var(--medium);}
+.badge-low{background:var(--low-tint);color:var(--low);}
+.badge-success{background:var(--success-tint);color:var(--success);}
+.badge-neutral{background:var(--surface-sunk);color:var(--ink-muted);border:1px solid var(--border);}
+.badge-accent{background:var(--accent-tint);color:var(--accent);}
+.badge-teal{background:var(--teal-tint);color:var(--teal);}
+.badge-dot{width:6px;height:6px;border-radius:50%;background:currentColor;}
+
+.pill-row{display:flex;gap:6px;flex-wrap:wrap;}
+.chip{
+  font-size:12px;padding:4px 10px;border-radius:20px;border:1px solid var(--border-strong);
+  background:var(--surface);color:var(--ink-muted);cursor:pointer;font-weight:500;
+}
+.chip.active{background:var(--accent);border-color:var(--accent);color:#fff;}
+
+.toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap;}
+.search-box{
+  display:flex;align-items:center;gap:8px;border:1px solid var(--border-strong);border-radius:5px;
+  padding:7px 11px;background:var(--surface);min-width:240px;
+}
+.search-box input{border:none;outline:none;font-size:13px;flex:1;font-family:inherit;}
+.search-box svg{width:14px;height:14px;color:var(--ink-faint);flex:0 0 auto;}
+
+/* ============================= TWO-PANE ============================= */
+.split{display:grid;grid-template-columns:1.5fr 1fr;gap:18px;align-items:start;}
+
+/* Onboarding / journey card */
+.journey-card{background:linear-gradient(135deg,var(--accent) 0%,#274a7e 100%);border-radius:var(--radius);color:#fff;padding:22px 24px;margin-bottom:18px;}
+.journey-card h3{color:#fff;font-size:16px;margin-bottom:4px;}
+.journey-card p{color:#C9D2E4;font-size:13px;margin:0 0 16px;max-width:600px;}
+.journey-steps{display:flex;gap:0;}
+.jstep{flex:1;position:relative;padding-right:14px;}
+.jstep:not(:last-child)::after{content:"";position:absolute;top:13px;right:0;width:14px;height:1px;background:rgba(255,255,255,0.28);}
+.jstep-num{
+  width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;margin-bottom:10px;
+  background:rgba(255,255,255,0.14);color:#fff;border:1px solid rgba(255,255,255,0.3);
+}
+.jstep.done .jstep-num{background:#fff;color:var(--accent);border-color:#fff;}
+.jstep-title{font-size:12.5px;font-weight:600;color:#fff;margin-bottom:2px;}
+.jstep-sub{font-size:11.5px;color:#B7C2DA;}
+.jstep-link{font-size:11.5px;color:#fff;text-decoration:underline;text-underline-offset:2px;background:none;border:none;padding:0;margin-top:6px;font-family:inherit;cursor:pointer;}
+
+/* Turn detail */
+.transcript{display:flex;flex-direction:column;gap:10px;}
+.msg{max-width:78%;padding:10px 13px;border-radius:10px;font-size:13.5px;line-height:1.5;}
+.msg-user{align-self:flex-start;background:var(--surface-sunk);border:1px solid var(--border);border-bottom-left-radius:2px;}
+.msg-bot{align-self:flex-end;background:var(--accent-tint);border:1px solid #D6DFEF;border-bottom-right-radius:2px;}
+.msg-meta{font-size:10.5px;color:var(--ink-faint);margin-top:4px;font-family:'IBM Plex Mono',monospace;}
+
+.kv-grid{display:grid;grid-template-columns:auto 1fr;gap:8px 16px;font-size:13px;}
+.kv-grid dt{color:var(--ink-muted);}
+.kv-grid dd{margin:0;font-weight:500;}
+
+.finding-card{border:1px solid var(--border);border-left:4px solid var(--low);border-radius:5px;padding:13px 15px;margin-bottom:10px;background:var(--surface);}
+.finding-card.sev-safety{border-left-color:var(--safety);background:var(--safety-tint);}
+.finding-card.sev-high{border-left-color:var(--high);}
+.finding-card.sev-medium{border-left-color:var(--medium);}
+.finding-card-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;gap:10px;}
+.finding-title{font-weight:600;font-size:13.5px;}
+.finding-id{font-size:11px;color:var(--ink-faint);}
+.finding-summary{font-size:13px;color:var(--ink-muted);margin-bottom:10px;line-height:1.55;}
+.finding-evidence{
+  font-size:12px;background:var(--surface-sunk);border:1px solid var(--border);border-radius:4px;
+  padding:8px 10px;color:var(--ink-muted);font-family:'IBM Plex Mono',monospace;margin-bottom:10px;
+}
+.finding-actions{display:flex;gap:8px;}
+.status-tag{font-size:11px;font-weight:600;padding:3px 9px;border-radius:4px;}
+.status-open{background:var(--medium-tint);color:var(--medium);}
+.status-approved{background:var(--success-tint);color:var(--success);}
+.status-rejected{background:var(--low-tint);color:var(--ink-muted);}
+.status-routed{background:var(--teal-tint);color:var(--teal);}
+
+/* Config screen */
+.config-section{border-bottom:1px solid var(--border);padding:18px;}
+.config-section:last-child{border-bottom:none;}
+.config-section h4{font-size:13.5px;margin-bottom:3px;}
+.config-section .desc{font-size:12px;color:var(--ink-muted);margin-bottom:14px;}
+.config-row{display:grid;grid-template-columns:220px 1fr;gap:16px;align-items:center;padding:9px 0;border-bottom:1px dashed var(--border);}
+.config-row:last-child{border-bottom:none;}
+.config-row label{font-size:13px;font-weight:500;}
+.config-row .config-hint{font-size:11.5px;color:var(--ink-faint);margin-top:2px;}
+.toggle{position:relative;width:38px;height:21px;border-radius:20px;background:var(--border-strong);flex:0 0 38px;cursor:pointer;border:none;}
+.toggle::after{content:"";position:absolute;top:2px;left:2px;width:17px;height:17px;border-radius:50%;background:#fff;transition:transform .15s;box-shadow:0 1px 2px rgba(0,0,0,.3);}
+.toggle.on{background:var(--teal);}
+.toggle.on::after{transform:translateX(17px);}
+.range-row{display:flex;align-items:center;gap:12px;}
+.range-row input[type=range]{flex:1;}
+.range-val{font-family:'IBM Plex Mono',monospace;font-size:12.5px;background:var(--surface-sunk);border:1px solid var(--border);padding:2px 8px;border-radius:4px;min-width:52px;text-align:center;}
+
+/* Modal */
+.modal-overlay{
+  position:fixed;inset:0;background:rgba(20,24,32,0.45);display:flex;align-items:center;justify-content:center;
+  z-index:100;padding:20px;
+}
+.modal{background:var(--surface);border-radius:8px;width:100%;max-width:480px;box-shadow:var(--shadow-pop);max-height:90vh;overflow-y:auto;}
+.modal-wide{max-width:640px;}
+.modal-head{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--border);}
+.modal-head h3{font-size:16px;}
+.modal-close{background:none;border:none;font-size:20px;color:var(--ink-faint);line-height:1;padding:4px;}
+.modal-body{padding:20px 22px;}
+.modal-foot{display:flex;justify-content:flex-end;gap:10px;padding:16px 22px;border-top:1px solid var(--border);}
+
+/* Toasts */
+#toast-container{position:fixed;bottom:22px;right:22px;display:flex;flex-direction:column;gap:10px;z-index:200;}
+.toast{
+  background:var(--ink);color:#fff;padding:12px 16px;border-radius:6px;font-size:13px;
+  box-shadow:var(--shadow-pop);display:flex;align-items:center;gap:10px;min-width:260px;
+  animation:toast-in .18s ease-out;
+}
+.toast.success{background:var(--success);}
+.toast.safety{background:var(--safety);}
+@keyframes toast-in{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+
+/* Recommendation cards */
+.rec-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;margin-bottom:14px;}
+.rec-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:10px;}
+.rec-type{font-size:11px;font-weight:700;color:var(--teal);text-transform:none;}
+.rec-title{font-size:14.5px;font-weight:600;margin-top:3px;}
+.rec-evidence-list{font-size:12.5px;color:var(--ink-muted);margin:10px 0;padding-left:0;list-style:none;}
+.rec-evidence-list li{padding:4px 0;border-bottom:1px dashed var(--border);}
+.rec-evidence-list li:last-child{border-bottom:none;}
+.rec-draft{background:var(--surface-sunk);border:1px solid var(--border);border-radius:5px;padding:12px 14px;font-size:13px;margin:10px 0;}
+.rec-draft label{font-size:11px;color:var(--ink-faint);display:block;margin-bottom:4px;}
+
+.empty-state{padding:48px 20px;text-align:center;color:var(--ink-muted);}
+.empty-state h4{font-size:15px;color:var(--ink);margin-bottom:6px;}
+.empty-state p{font-size:13px;max-width:340px;margin:0 auto;}
+
+.progress-bar{height:7px;background:var(--surface-sunk);border-radius:4px;overflow:hidden;border:1px solid var(--border);}
+.progress-fill{height:100%;background:var(--teal);}
+.progress-fill.warn{background:var(--high);}
+
+.divider-label{font-size:11px;font-weight:600;color:var(--ink-faint);margin:22px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--border);}
+</style>
+</head>
+<body>
+
+<!-- ================= LOGIN SCREEN ================= -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-mark"><span class="dot"></span><span><b>Clinic Chat</b> — Audit Platform</span></div>
+
+    <div id="login-step-1">
+      <h1>Sign in</h1>
+      <p class="login-sub">Internal reviewer &amp; admin access only. This is not the participant-facing SMS bot.</p>
+      <div class="field">
+        <label for="login-email">Work email</label>
+        <input id="login-email" type="email" value="dana.whitfield@futransolutions.com">
+      </div>
+      <div class="field">
+        <label for="login-pass">Password</label>
+        <input id="login-pass" type="password" value="••••••••••••">
+      </div>
+      <button class="btn btn-primary btn-block" onclick="showMfa()">Continue</button>
+      <p class="login-foot">Protected by MFA · Access is logged for HIPAA/SOC-2 compliance</p>
+    </div>
+
+    <div id="login-step-2" class="hidden">
+      <h1>Enter your code</h1>
+      <p class="login-sub">We sent a 6-digit code to your authenticator app.</p>
+      <div class="mfa-row">
+        <input maxlength="1" value="4"><input maxlength="1" value="1"><input maxlength="1" value="9">
+        <input maxlength="1" value="2"><input maxlength="1" value="6"><input maxlength="1" value="0">
+      </div>
+      <button class="btn btn-primary btn-block" onclick="login()">Verify &amp; sign in</button>
+      <p class="login-foot">Signing in as <b>Owner / Admin</b> · Dana Whitfield</p>
+    </div>
+  </div>
+</div>
+
+<!-- ================= APP SHELL ================= -->
+<div id="app" class="hidden">
+
+  <aside class="rail">
+    <div class="rail-brand"><span class="dot"></span><span class="rail-brand-text"><b>Clinic Chat</b> Audit</span></div>
+
+    <nav>
+      <button class="rail-item active" data-view="dashboard" onclick="goView('dashboard')">
+        <svg class="rail-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>
+        Dashboard
+      </button>
+      <button class="rail-item" data-view="queue" onclick="goView('queue')">
+        <svg class="rail-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
+        Review queue
+        <span class="rail-badge" id="rail-queue-badge">3</span>
+      </button>
+      <button class="rail-item" data-view="recommendations" onclick="goView('recommendations')">
+        <svg class="rail-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 2v4M12 18v4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M2 12h4M18 12h4M4.9 19.1l2.8-2.8M16.3 7.7l2.8-2.8"/></svg>
+        Recommendations
+      </button>
+      <button class="rail-item" data-view="reports" onclick="goView('reports')">
+        <svg class="rail-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 3v18h18M8 17V10M13 17V6M18 17v-4"/></svg>
+        Reports
+      </button>
+
+      <div class="rail-group-label">Admin</div>
+      <button class="rail-item" data-view="admin-users" onclick="goView('admin-users')">
+        <svg class="rail-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="9" cy="8" r="3.2"/><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6M16 8.2a3 3 0 010 5.8M21.5 20c0-2.8-2-4.8-4.5-5.6"/></svg>
+        Users &amp; roles
+      </button>
+      <button class="rail-item" data-view="admin-config" onclick="goView('admin-config')">
+        <svg class="rail-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="3"/><path d="M19.4 13.5a7.6 7.6 0 000-3l2-1.5-2-3.4-2.3.9a7.6 7.6 0 00-2.6-1.5L14 2.5h-4l-.5 2.5a7.6 7.6 0 00-2.6 1.5l-2.3-.9-2 3.4 2 1.5a7.6 7.6 0 000 3l-2 1.5 2 3.4 2.3-.9c.76.66 1.65 1.17 2.6 1.5L10 21.5h4l.5-2.5a7.6 7.6 0 002.6-1.5l2.3.9 2-3.4-2-1.5z"/></svg>
+        Audit configuration
+      </button>
+      <button class="rail-item" data-view="admin-scheduler" onclick="goView('admin-scheduler')">
+        <svg class="rail-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 2"/></svg>
+        Scheduler
+      </button>
+    </nav>
+
+    <div class="rail-foot">
+      <div class="rail-user">
+        <div class="rail-avatar">DW</div>
+        <div class="rail-user-meta">
+          <div class="rail-user-name">Dana Whitfield</div>
+          <div class="rail-user-role">Owner / Admin</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <div class="topbar-title">
+        <h2 id="topbar-heading">Dashboard</h2>
+        <span class="crumb" id="topbar-crumb">Overview</span>
+      </div>
+      <div class="topbar-right">
+        <span class="env-chip">Library v128 · pulled 40 min ago</span>
+        <button class="btn btn-ghost btn-sm" onclick="logout()">Sign out</button>
+      </div>
+    </header>
+
+    <div class="views">
+
+      <!-- ============ DASHBOARD ============ -->
+      <section class="view" id="view-dashboard">
+        <div class="journey-card">
+          <h3>Getting Clinic Chat Audit running</h3>
+          <p>The usual first pass for a new deployment: bring your reviewers on board, tune what the audit checks for, then start working the queue.</p>
+          <div class="journey-steps">
+            <div class="jstep done">
+              <div class="jstep-num">✓</div>
+              <div class="jstep-title">1. Invite your team</div>
+              <div class="jstep-sub">2 of 3 reviewers active</div>
+              <button class="jstep-link" onclick="goView('admin-users')">Manage users</button>
+            </div>
+            <div class="jstep done">
+              <div class="jstep-num">✓</div>
+              <div class="jstep-title">2. Set audit configuration</div>
+              <div class="jstep-sub">v4 active · saved 2 days ago</div>
+              <button class="jstep-link" onclick="goView('admin-config')">Review settings</button>
+            </div>
+            <div class="jstep">
+              <div class="jstep-num">3</div>
+              <div class="jstep-title">3. Work the review queue</div>
+              <div class="jstep-sub">3 items waiting, 1 safety-critical</div>
+              <button class="jstep-link" onclick="goView('queue')">Open queue</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="stat-grid">
+          <div class="stat-card">
+            <div class="stat-label">Last run</div>
+            <div class="stat-value">RUN-2091</div>
+            <div class="stat-foot up">Succeeded · 1,842 turns · 6:02 AM</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Findings this period</div>
+            <div class="stat-value">57</div>
+            <div class="stat-foot warn">1 safety-critical, unresolved</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Review queue depth</div>
+            <div class="stat-value">3</div>
+            <div class="stat-foot">2 content, 1 safety</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Cost burn — last run</div>
+            <div class="stat-value">$4.10<span style="font-size:14px;color:var(--ink-faint);"> / $6.00</span></div>
+            <div class="progress-bar" style="margin-top:8px;"><div class="progress-fill" style="width:68%;"></div></div>
+          </div>
+        </div>
+
+        <div class="split">
+          <div class="panel">
+            <div class="panel-head">
+              <div><h3>Findings by type</h3><div class="sub">Last 7 days · click a row to open the filtered queue</div></div>
+            </div>
+            <div class="panel-body flush">
+              <table>
+                <thead><tr><th>Finding type</th><th>Owner</th><th style="text-align:right;">Count</th><th></th></tr></thead>
+                <tbody id="findings-by-type"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-head"><h3>Recent runs</h3></div>
+            <div class="panel-body flush">
+              <table>
+                <thead><tr><th>Run</th><th>Status</th><th>Turns</th></tr></thead>
+                <tbody id="recent-runs"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ REVIEW QUEUE ============ -->
+      <section class="view" id="view-queue">
+        <div class="view-head">
+          <div>
+            <h1>Review queue</h1>
+            <p>Safety-critical findings — a missed STOP opt-out or emergency escalation — always sort first, regardless of anything else in the queue.</p>
+          </div>
+        </div>
+
+        <div class="toolbar">
+          <div class="pill-row" id="queue-filters"></div>
+          <div class="search-box">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+            <input placeholder="Search conversation, intent, participant…">
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-body flush">
+            <table>
+              <thead><tr><th>Priority</th><th>Turn</th><th>Finding</th><th>Flow</th><th>Confidence</th><th>Age</th><th></th></tr></thead>
+              <tbody id="queue-rows"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ TURN DETAIL ============ -->
+      <section class="view" id="view-turn">
+        <div class="view-head">
+          <div>
+            <button class="btn btn-ghost btn-sm" onclick="goView('queue')" style="margin-bottom:10px;">← Back to queue</button>
+            <h1 id="turn-title">Turn detail</h1>
+            <p id="turn-sub" class="mono" style="font-family:'IBM Plex Mono',monospace;"></p>
+          </div>
+        </div>
+
+        <div class="split">
+          <div>
+            <div class="panel">
+              <div class="panel-head"><h3>Conversation transcript</h3><div class="sub">Participant hash: <span id="turn-participant" class="mono"></span></div></div>
+              <div class="panel-body">
+                <div class="transcript" id="turn-transcript"></div>
+              </div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-head"><h3>Findings</h3><div class="sub" id="turn-findings-count"></div></div>
+              <div class="panel-body" id="turn-findings"></div>
+            </div>
+          </div>
+
+          <div>
+            <div class="panel">
+              <div class="panel-head"><h3>Flow &amp; matched intents</h3></div>
+              <div class="panel-body">
+                <dl class="kv-grid" id="turn-flow-kv"></dl>
+                <div class="divider-label">Top matched intents</div>
+                <table>
+                  <thead><tr><th>Rank</th><th>Intent</th><th style="text-align:right;">Conf.</th></tr></thead>
+                  <tbody id="turn-intents"></tbody>
+                </table>
+              </div>
+            </div>
+            <div class="panel">
+              <div class="panel-head"><h3>Catalog context</h3></div>
+              <div class="panel-body">
+                <dl class="kv-grid" id="turn-catalog-kv"></dl>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ RECOMMENDATIONS ============ -->
+      <section class="view" id="view-recommendations">
+        <div class="view-head">
+          <div>
+            <h1>Recommendations</h1>
+            <p>New flows, draft answers for content gaps, intent merges, and prompt-change suggestions — all held for your approval before anything reaches Clinic Chat's content system.</p>
+          </div>
+        </div>
+        <div class="pill-row" style="margin-bottom:16px;" id="rec-filters"></div>
+        <div id="rec-list"></div>
+      </section>
+
+      <!-- ============ REPORTS ============ -->
+      <section class="view" id="view-reports">
+        <div class="view-head">
+          <div>
+            <h1>Failure-pattern &amp; trend report</h1>
+            <p>Recurring problems, overlapping intents, and unanswered questions over time — the numbers a Content Reviewer would otherwise have to pull by hand.</p>
+          </div>
+          <button class="btn btn-ghost" onclick="toast('Report exported as CSV','success')">Export CSV</button>
+        </div>
+
+        <div class="stat-grid">
+          <div class="stat-card"><div class="stat-label">Audit-vs-human parity</div><div class="stat-value">91.4%</div><div class="stat-foot up">Target ≥ 90% · last validated Aug 24</div></div>
+          <div class="stat-card"><div class="stat-label">Problems surfaced</div><div class="stat-value">312</div><div class="stat-foot">Last 30 days</div></div>
+          <div class="stat-card"><div class="stat-label">Recurring trends open</div><div class="stat-value">6</div><div class="stat-foot warn">2 above alert threshold</div></div>
+          <div class="stat-card"><div class="stat-label">Manual review time saved</div><div class="stat-value">~38 hrs</div><div class="stat-foot up">Estimated, last 30 days</div></div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head"><h3>Recurring intent-confusion trends</h3><div class="sub">Same pair confused across 3+ conversations in the window</div></div>
+          <div class="panel-body flush">
+            <table>
+              <thead><tr><th>Intent A</th><th>Intent B</th><th style="text-align:right;">Occurrences (30d)</th><th>Trend</th><th></th></tr></thead>
+              <tbody id="trend-rows"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head"><h3>Unanswered question topics</h3><div class="sub">Grouped and ranked by frequency</div></div>
+          <div class="panel-body flush">
+            <table>
+              <thead><tr><th>Topic</th><th style="text-align:right;">Occurrences</th><th>Status</th></tr></thead>
+              <tbody id="unanswered-rows"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ ADMIN: USERS ============ -->
+      <section class="view" id="view-admin-users">
+        <div class="view-head">
+          <div>
+            <h1>Users &amp; roles</h1>
+            <p>Internal reviewer and admin access to the audit platform only — separate from any Clinic Chat participant-facing account.</p>
+          </div>
+          <button class="btn btn-primary" onclick="openModal('modal-invite')">+ Invite user</button>
+        </div>
+
+        <div class="panel">
+          <div class="panel-body flush">
+            <table>
+              <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Last login</th><th></th></tr></thead>
+              <tbody id="user-rows"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="divider-label">Access change log</div>
+        <div class="panel">
+          <div class="panel-body flush">
+            <table>
+              <thead><tr><th>When</th><th>Actor</th><th>Change</th></tr></thead>
+              <tbody id="access-log-rows"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ ADMIN: CONFIG ============ -->
+      <section class="view" id="view-admin-config">
+        <div class="view-head">
+          <div>
+            <h1>Audit configuration</h1>
+            <p>Every change here creates a new version — the version an audit run used is always pinned, so a past finding can still be explained.</p>
+          </div>
+          <div style="display:flex;gap:10px;align-items:center;">
+            <span class="badge badge-teal">Active: v4</span>
+            <button class="btn btn-primary" onclick="saveConfigVersion()">Save as new version</button>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head"><h3>Safety sensitivity</h3></div>
+          <div class="config-section">
+            <h4>STOP / escalation detection</h4>
+            <div class="desc">Runs on 100% of eligible turns regardless of any sampling settings below — this cannot be turned off.</div>
+            <div class="config-row">
+              <div><label>False-positive tolerance</label><div class="config-hint">Lower = catches more borderline cases, more false alarms for reviewers</div></div>
+              <div class="range-row"><input type="range" min="1" max="5" value="2" oninput="document.getElementById('rv-safety').textContent=this.value"><span class="range-val" id="rv-safety">2</span></div>
+            </div>
+            <div class="config-row">
+              <label>Always include in queue, never sampled out</label>
+              <button class="toggle on" onclick="this.classList.toggle('on')"></button>
+            </div>
+          </div>
+
+          <div class="config-section">
+            <h4>Batch &amp; volume</h4>
+            <div class="config-row">
+              <div><label>Run cadence</label></div>
+              <select style="max-width:220px;"><option>Nightly (every 24h)</option><option>Every 12 hours</option><option>Manual only</option></select>
+            </div>
+            <div class="config-row">
+              <div><label>Population mode</label></div>
+              <select style="max-width:220px;"><option>Full population</option><option selected>Sampled — 40%</option></select>
+            </div>
+            <div class="config-row">
+              <div><label>Max cost per run (USD)</label></div>
+              <div class="range-row" style="max-width:260px;"><input type="range" min="1" max="20" value="6" oninput="document.getElementById('rv-cost').textContent='$'+this.value"><span class="range-val" id="rv-cost">$6</span></div>
+            </div>
+          </div>
+
+          <div class="config-section">
+            <h4>Model &amp; prompt</h4>
+            <div class="config-row"><div><label>Phase 1 screening model</label></div><select style="max-width:260px;"><option>Bedrock — Haiku (fast/cheap)</option></select></div>
+            <div class="config-row"><div><label>Phase 2 diagnosis model</label></div><select style="max-width:260px;"><option>Bedrock — Sonnet (deep)</option><option>Disabled</option></select></div>
+          </div>
+
+          <div class="config-section">
+            <h4>Enabled finding types</h4>
+            <div class="pill-row">
+              <span class="chip active">Missing content</span>
+              <span class="chip active">Genuine AI miss</span>
+              <span class="chip active">STOP/escalation miss</span>
+              <span class="chip active">Response-vs-intent mismatch</span>
+              <span class="chip active">Intent overlap</span>
+              <span class="chip">Prompt-change suggestions</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head"><h3>Version history</h3></div>
+          <div class="panel-body flush">
+            <table>
+              <thead><tr><th>Version</th><th>Saved by</th><th>When</th><th>Note</th><th></th></tr></thead>
+              <tbody id="config-version-rows"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ ADMIN: SCHEDULER ============ -->
+      <section class="view" id="view-admin-scheduler">
+        <div class="view-head">
+          <div>
+            <h1>Scheduler</h1>
+            <p>Controls the recurring pull-and-audit job. Pausing stops the next scheduled run from firing until resumed.</p>
+          </div>
+          <button class="btn btn-primary" onclick="openModal('modal-manual-run')">Run now</button>
+        </div>
+
+        <div class="panel">
+          <div class="panel-body" style="display:flex;justify-content:space-between;align-items:center;">
+            <div>
+              <div class="stat-label">Nightly audit job</div>
+              <div style="display:flex;align-items:center;gap:8px;margin-top:4px;">
+                <span class="badge badge-success"><span class="badge-dot"></span>Active</span>
+                <span style="font-size:13px;color:var(--ink-muted);">Next run: today, 11:00 PM MT</span>
+              </div>
+            </div>
+            <button class="toggle on" onclick="toggleSchedule(this)"></button>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head"><h3>Run history</h3></div>
+          <div class="panel-body flush">
+            <table>
+              <thead><tr><th>Run</th><th>Trigger</th><th>Status</th><th>Turns</th><th>Findings</th><th>Cost</th></tr></thead>
+              <tbody id="run-history-rows"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+</div>
+
+<!-- ================= MODAL: INVITE USER ================= -->
+<div class="modal-overlay hidden" id="overlay-modal-invite">
+  <div class="modal" id="modal-invite">
+    <div class="modal-head"><h3>Invite a user</h3><button class="modal-close" onclick="closeModal('modal-invite')">&times;</button></div>
+    <div class="modal-body">
+      <div class="field"><label>Full name</label><input id="invite-name" placeholder="e.g. Priya Nair"></div>
+      <div class="field"><label>Work email</label><input id="invite-email" type="email" placeholder="name@futransolutions.com"></div>
+      <div class="field">
+        <label>Role</label>
+        <select id="invite-role">
+          <option>Content Reviewer</option>
+          <option>Developer</option>
+          <option>Owner / Admin</option>
+        </select>
+        <div class="field-hint">A Content Reviewer sees the queue, findings, and recommendations. A Developer only sees findings routed to them. Owner/Admin can also manage users and configuration.</div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('modal-invite')">Cancel</button>
+      <button class="btn btn-primary" onclick="submitInvite()">Send invite</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= MODAL: MANUAL RUN ================= -->
+<div class="modal-overlay hidden" id="overlay-modal-manual-run">
+  <div class="modal" id="modal-manual-run">
+    <div class="modal-head"><h3>Start an ad-hoc audit run</h3><button class="modal-close" onclick="closeModal('modal-manual-run')">&times;</button></div>
+    <div class="modal-body">
+      <div class="field"><label>Window start</label><input type="date" value="2026-08-24"></div>
+      <div class="field"><label>Window end</label><input type="date" value="2026-08-31"></div>
+      <div class="field"><label>Flow filter (optional)</label><select><option>All flows</option><option>survey_income_verification</option><option>substantive_question</option></select></div>
+      <div class="field-hint">Uses the active configuration (v4) and its cost cap.</div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('modal-manual-run')">Cancel</button>
+      <button class="btn btn-primary" onclick="startManualRun()">Start run</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= MODAL: DECISION ================= -->
+<div class="modal-overlay hidden" id="overlay-modal-decision">
+  <div class="modal modal-wide" id="modal-decision">
+    <div class="modal-head"><h3 id="decision-title">Review decision</h3><button class="modal-close" onclick="closeModal('modal-decision')">&times;</button></div>
+    <div class="modal-body">
+      <p id="decision-context" style="font-size:13px;color:var(--ink-muted);margin-bottom:14px;"></p>
+      <div class="field">
+        <label>Decision</label>
+        <div class="pill-row" id="decision-choice">
+          <span class="chip active" data-choice="approve">Approve</span>
+          <span class="chip" data-choice="changes">Request changes</span>
+          <span class="chip" data-choice="reject">Reject</span>
+        </div>
+      </div>
+      <div class="field"><label>Comment (required)</label><textarea rows="3" id="decision-comment" placeholder="Explain your decision for the audit trail…"></textarea></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('modal-decision')">Cancel</button>
+      <button class="btn btn-primary" onclick="submitDecision()">Record decision</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+
+<script>
+/* ======================================================================
+   MOCK DATA
+   ====================================================================== */
+const queueItems = [
+  {id:'T-88213', safety:true, finding:'Missed STOP opt-out', findingType:'stop_escalation_miss', flow:'stop', conf:'0.31', age:'2h', participant:'ptc_9f2a…', status:'open'},
+  {id:'T-88190', safety:false, finding:'Response-vs-intent mismatch', findingType:'response_mismatch', flow:'substantive_question', conf:'0.88', age:'5h', participant:'ptc_1cc4…', status:'open'},
+  {id:'T-88177', safety:false, finding:'Extraction quality — blurry pay stub', findingType:'document_extraction', flow:'survey_income_verification', conf:'0.62', age:'8h', participant:'ptc_7bd1…', status:'open'},
+];
+
+const findingsByType = [
+  {type:'Missed STOP / escalation', owner:'Safety', count:1, safety:true},
+  {type:'Response-vs-intent mismatch', owner:'Content', count:18, safety:false},
+  {type:'Missing library content', owner:'Content', count:14, safety:false},
+  {type:'Genuine AI miss', owner:'Engineering', count:11, safety:false},
+  {type:'Intent overlap', owner:'Content', count:9, safety:false},
+  {type:'Extraction quality', owner:'Content', count:4, safety:false},
+];
+
+const recentRuns = [
+  {id:'RUN-2091', status:'Succeeded', turns:1842},
+  {id:'RUN-2090', status:'Succeeded', turns:1791},
+  {id:'RUN-2089', status:'Partial', turns:1804},
+  {id:'RUN-2088', status:'Succeeded', turns:1699},
+];
+
+const runHistory = [
+  {id:'RUN-2091', trigger:'Scheduled', status:'Succeeded', turns:1842, findings:57, cost:'$4.10'},
+  {id:'RUN-2090', trigger:'Scheduled', status:'Succeeded', turns:1791, findings:49, cost:'$3.85'},
+  {id:'RUN-2089', trigger:'Manual · D. Whitfield', status:'Partial', turns:1804, findings:31, cost:'$6.00 (cap hit)'},
+  {id:'RUN-2088', trigger:'Scheduled', status:'Succeeded', turns:1699, findings:44, cost:'$3.60'},
+];
+
+const users = [
+  {name:'Dana Whitfield', email:'dana.whitfield@futransolutions.com', role:'Owner / Admin', status:'Active', last:'Just now'},
+  {name:'Marcus Lee', email:'marcus.lee@clinicchat.com', role:'Content Reviewer', status:'Active', last:'Yesterday, 4:12 PM'},
+  {name:'Priya Nair', email:'priya.nair@clinicchat.com', role:'Developer', status:'Pending', last:'Never logged in'},
+];
+
+const accessLog = [
+  {when:'Aug 29, 9:14 AM', actor:'Dana Whitfield', change:'Invited priya.nair@clinicchat.com as Developer'},
+  {when:'Aug 26, 2:03 PM', actor:'Dana Whitfield', change:'Changed marcus.lee@clinicchat.com role: Content Reviewer → Content Reviewer (scope: all libraries)'},
+  {when:'Aug 12, 10:41 AM', actor:'Dana Whitfield', change:'Deactivated j.torres@clinicchat.com (role change)'},
+];
+
+const configVersions = [
+  {v:'v4', by:'Dana Whitfield', when:'Aug 29, 2026', note:'Lowered escalation false-positive tolerance after OQ-06 sign-off', active:true},
+  {v:'v3', by:'Dana Whitfield', when:'Aug 14, 2026', note:'Enabled intent-overlap finding type', active:false},
+  {v:'v2', by:'System (bootstrap)', when:'Aug 1, 2026', note:'Raised per-run cost cap to $6', active:false},
+  {v:'v1', by:'System (bootstrap)', when:'Jul 28, 2026', note:'Initial configuration', active:false},
+];
+
+const trends = [
+  {a:'medicaid_renewal_deadline', b:'redetermination_next_steps', count:14, dir:'up'},
+  {a:'income_verification_paystub', b:'income_verification_selfemployed', count:9, dir:'up'},
+  {a:'hr1_work_requirement_explainer', b:'work_requirement_exemption', count:7, dir:'flat'},
+];
+
+const unanswered = [
+  {topic:'How to appeal a denied Medicaid application', count:22, status:'Draft ready — Recommendations'},
+  {topic:'What counts as proof of Colorado residency', count:15, status:'Draft ready — Recommendations'},
+  {topic:'Timeline for HR1 work-requirement exemption review', count:11, status:'Not yet drafted'},
+];
+
+const recommendations = [
+  {
+    kind:'content_gap', badge:'Content gap', title:'Draft answer — "How to appeal a denied application"',
+    body:'22 conversations in the last 30 days asked a variant of this question with no matching intent.',
+    evidence:['T-87990 — "can I appeal if they said no"', 'T-88041 — "how do I fight the denial"', '+ 20 more turns'],
+    draftLabel:'Drafted answer', draft:'"You can appeal a denial within 60 days of the decision letter. We\'ll text you the appeal form link and walk you through what to include — reply APPEAL to start."'
+  },
+  {
+    kind:'new_flow', badge:'New flow', title:'New flow — HR1 work-requirement exemption review',
+    body:'11 conversations about exemption review timelines don\'t map cleanly to any existing flow; they keep getting routed to the general HR1 explainer instead.',
+    evidence:['T-87812', 'T-87950', 'T-88066', '+ 8 more turns'],
+  },
+  {
+    kind:'merge', badge:'Intent merge', title:'Merge — income_verification_paystub ↔ income_verification_selfemployed',
+    body:'These two intents overlap heavily in description and are frequently both matched with similar confidence for the same message.',
+    evidence:['Cosine similarity: 0.91', '9 turns in the last 30 days matched both as top-2 candidates'],
+  },
+  {
+    kind:'prompt', badge:'Prompt change', title:'Prompt suggestion — survey interruption handling',
+    body:'The re-ask prompt after a survey interruption doesn\'t restate which question was interrupted, leading to confused corrections.',
+    evidence:['T-87701', 'T-87889', 'T-88012'],
+  },
+];
+
+const turnDetail = {
+  id:'T-88213', participant:'ptc_9f2a71e0',
+  transcript:[
+    {who:'user', text:'stop texting me please im done with this', ts:'6:41:02 PM'},
+    {who:'bot', text:'Got it — before I opt you out, are you sure? You may miss updates about your Medicaid renewal deadline.', ts:'6:41:04 PM'},
+    {who:'user', text:'yes stop', ts:'6:41:40 PM'},
+    {who:'bot', text:'Your Medicaid renewal is due October 3rd. Would you like help getting started now?', ts:'6:41:41 PM'},
+  ],
+  flow:{flow_type:'other', sub_flow:'gratitude_feedback_or_ender', correct:false},
+  intents:[
+    {rank:1, name:'gratitude_feedback_or_ender', conf:'0.74'},
+    {rank:2, name:'stop_opt_out', conf:'0.69'},
+    {rank:3, name:'redetermination_next_steps', conf:'0.22'},
+  ],
+  catalog:{library:'v128', snapshot:'snap_2026-08-29T02:00Z', flowCatalogMatch:'stop_opt_out (not selected)'},
+  findings:[
+    {id:'FND-51092', type:'Missed STOP opt-out', severity:'safety', summary:'The user\'s second message ("yes stop") is a clear, unambiguous STOP confirmation. The bot classified it as gratitude_feedback_or_ender and continued the conversation instead of opting the participant out.', evidence:'flow_type=other · sub_flow=gratitude_feedback_or_ender · stop_opt_out confidence=0.69 (not selected)', status:'open'},
+  ]
+};
+</script>
+<script>
+/* ======================================================================
+   RENDER HELPERS
+   ====================================================================== */
+function el(html){ const t=document.createElement('template'); t.innerHTML=html.trim(); return t.content.firstChild; }
+
+function sevBadge(sev){
+  if(sev==='safety') return `<span class="badge badge-safety"><span class="badge-dot"></span>Safety-critical</span>`;
+  if(sev==='high') return `<span class="badge badge-high">High</span>`;
+  if(sev==='medium') return `<span class="badge badge-medium">Medium</span>`;
+  return `<span class="badge badge-low">Low</span>`;
+}
+
+function renderDashboard(){
+  const tbody = document.getElementById('findings-by-type');
+  tbody.innerHTML = findingsByType.map(f => `
+    <tr class="row-clickable" onclick="goView('queue')">
+      <td>${f.safety ? '<span style="color:var(--safety);font-weight:600;">● </span>' : ''}${f.type}</td>
+      <td><span class="badge badge-neutral">${f.owner}</span></td>
+      <td style="text-align:right;font-family:'IBM Plex Mono',monospace;">${f.count}</td>
+      <td style="color:var(--ink-faint);">›</td>
+    </tr>`).join('');
+
+  document.getElementById('recent-runs').innerHTML = recentRuns.map(r => `
+    <tr>
+      <td class="mono" style="font-family:'IBM Plex Mono',monospace;">${r.id}</td>
+      <td>${r.status==='Succeeded' ? '<span class="badge badge-success">Succeeded</span>' : '<span class="badge badge-medium">Partial</span>'}</td>
+      <td>${r.turns.toLocaleString()}</td>
+    </tr>`).join('');
+}
+
+function renderQueue(){
+  const filters = ['All', 'Safety-critical', 'Content', 'Engineering'];
+  document.getElementById('queue-filters').innerHTML = filters.map((f,i)=>`<span class="chip ${i===0?'active':''}" onclick="setQueueFilter(this)">${f}</span>`).join('');
+
+  const sorted = [...queueItems].sort((a,b)=> (b.safety - a.safety));
+  document.getElementById('queue-rows').innerHTML = sorted.map(q => `
+    <tr class="row-clickable ${q.safety?'row-safety':''}" onclick="openTurn('${q.id}')">
+      <td>${sevBadge(q.safety?'safety':'medium')}</td>
+      <td class="mono" style="font-family:'IBM Plex Mono',monospace;">${q.id}</td>
+      <td>${q.finding}</td>
+      <td><span class="badge badge-accent">${q.flow}</span></td>
+      <td class="mono" style="font-family:'IBM Plex Mono',monospace;">${q.conf}</td>
+      <td style="color:var(--ink-faint);">${q.age}</td>
+      <td style="color:var(--ink-faint);">›</td>
+    </tr>`).join('');
+
+  document.getElementById('rail-queue-badge').textContent = queueItems.length;
+}
+
+function openTurn(id){
+  goView('turn');
+  const t = turnDetail; // demo always shows the one safety-critical turn in full detail
+  document.getElementById('turn-title').textContent = 'Turn ' + t.id;
+  document.getElementById('turn-sub').textContent = 'Ingested Aug 31, 2026 · Run RUN-2091';
+  document.getElementById('turn-participant').textContent = t.participant;
+
+  document.getElementById('turn-transcript').innerHTML = t.transcript.map(m => `
+    <div class="msg ${m.who==='user'?'msg-user':'msg-bot'}">
+      ${m.text}
+      <div class="msg-meta">${m.who==='user' ? 'Participant' : 'Bot response'} · ${m.ts}</div>
+    </div>`).join('');
+
+  document.getElementById('turn-findings-count').textContent = t.findings.length + ' finding' + (t.findings.length===1?'':'s') + ' on this turn';
+  document.getElementById('turn-findings').innerHTML = t.findings.map(f => `
+    <div class="finding-card sev-${f.severity}">
+      <div class="finding-card-head">
+        <div><span class="finding-title">${f.type}</span> <span class="finding-id mono">${f.id}</span></div>
+        ${sevBadge(f.severity)}
+      </div>
+      <div class="finding-summary">${f.summary}</div>
+      <div class="finding-evidence">${f.evidence}</div>
+      <div class="finding-actions">
+        <span class="status-tag status-open" id="status-${f.id}">Open</span>
+        <button class="btn btn-safety btn-sm" onclick="openDecisionModal('${f.id}','${f.type.replace(/'/g,"\'")}', true)">Approve escalation fix</button>
+        <button class="btn btn-ghost btn-sm" onclick="openDecisionModal('${f.id}','${f.type.replace(/'/g,"\'")}', false)">Request changes</button>
+      </div>
+    </div>`).join('');
+
+  document.getElementById('turn-flow-kv').innerHTML = `
+    <dt>flow_type</dt><dd class="mono">${t.flow.flow_type}</dd>
+    <dt>sub_flow</dt><dd class="mono">${t.flow.sub_flow}</dd>
+    <dt>Flow correctness</dt><dd>${t.flow.correct ? '<span class="badge badge-success">Correct</span>' : '<span class="badge badge-safety">Mis-routed</span>'}</dd>`;
+
+  document.getElementById('turn-intents').innerHTML = t.intents.map(i => `
+    <tr><td>${i.rank}</td><td class="mono">${i.name}</td><td style="text-align:right;" class="mono">${i.conf}</td></tr>`).join('');
+
+  document.getElementById('turn-catalog-kv').innerHTML = `
+    <dt>Library version</dt><dd class="mono">${t.catalog.library}</dd>
+    <dt>Snapshot</dt><dd class="mono" style="font-size:11.5px;">${t.catalog.snapshot}</dd>
+    <dt>Best catalog match</dt><dd>${t.catalog.flowCatalogMatch}</dd>`;
+}
+
+function renderRecommendations(){
+  const filters = ['All', 'Content gap', 'New flow', 'Intent merge', 'Prompt change'];
+  document.getElementById('rec-filters').innerHTML = filters.map((f,i)=>`<span class="chip ${i===0?'active':''}" onclick="setRecFilter(this)">${f}</span>`).join('');
+
+  document.getElementById('rec-list').innerHTML = recommendations.map((r,idx) => `
+    <div class="rec-card">
+      <div class="rec-head">
+        <div>
+          <div class="rec-type"><span class="badge badge-teal">${r.badge}</span></div>
+          <div class="rec-title">${r.title}</div>
+        </div>
+        <span class="status-tag status-open" id="rec-status-${idx}">Pending review</span>
+      </div>
+      <p style="font-size:13px;color:var(--ink-muted);margin:0 0 8px;">${r.body}</p>
+      <div class="divider-label" style="margin:10px 0 6px;">Evidence</div>
+      <ul class="rec-evidence-list">${r.evidence.map(e=>`<li>${e}</li>`).join('')}</ul>
+      ${r.draft ? `<div class="rec-draft"><label>${r.draftLabel}</label>${r.draft}</div>` : ''}
+      <div class="finding-actions" style="margin-top:10px;">
+        <button class="btn btn-teal btn-sm" onclick="openDecisionModal('REC-${idx}','${r.title.replace(/'/g,"\'")}', false, ${idx})">Approve</button>
+        <button class="btn btn-ghost btn-sm" onclick="openDecisionModal('REC-${idx}','${r.title.replace(/'/g,"\'")}', false, ${idx})">Request changes</button>
+        <button class="btn btn-danger btn-sm" onclick="openDecisionModal('REC-${idx}','${r.title.replace(/'/g,"\'")}', false, ${idx})">Reject</button>
+      </div>
+    </div>`).join('');
+}
+
+function renderReports(){
+  document.getElementById('trend-rows').innerHTML = trends.map(t => `
+    <tr>
+      <td class="mono">${t.a}</td><td class="mono">${t.b}</td>
+      <td style="text-align:right;" class="mono">${t.count}</td>
+      <td>${t.dir==='up' ? '<span class="badge badge-high">↑ rising</span>' : '<span class="badge badge-neutral">→ flat</span>'}</td>
+      <td><button class="btn btn-ghost btn-sm" onclick="goView('recommendations')">View</button></td>
+    </tr>`).join('');
+
+  document.getElementById('unanswered-rows').innerHTML = unanswered.map(u => `
+    <tr>
+      <td>${u.topic}</td>
+      <td style="text-align:right;" class="mono">${u.count}</td>
+      <td><span class="badge ${u.status.startsWith('Draft')?'badge-success':'badge-neutral'}">${u.status}</span></td>
+    </tr>`).join('');
+}
+
+function renderUsers(){
+  document.getElementById('user-rows').innerHTML = users.map((u,idx) => `
+    <tr>
+      <td><div style="font-weight:600;">${u.name}</div></td>
+      <td class="mono" style="color:var(--ink-muted);">${u.email}</td>
+      <td><span class="badge badge-accent">${u.role}</span></td>
+      <td>${u.status==='Active' ? '<span class="badge badge-success"><span class="badge-dot"></span>Active</span>' : '<span class="badge badge-medium">Pending</span>'}</td>
+      <td style="color:var(--ink-faint);">${u.last}</td>
+      <td><button class="btn btn-ghost btn-sm" onclick="toast('${u.status==='Active' ? 'Deactivated ' : 'Re-invited '}${u.name}','success')">${u.status==='Active' ? 'Deactivate' : 'Resend invite'}</button></td>
+    </tr>`).join('');
+
+  document.getElementById('access-log-rows').innerHTML = accessLog.map(a => `
+    <tr><td style="color:var(--ink-faint);white-space:nowrap;">${a.when}</td><td>${a.actor}</td><td>${a.change}</td></tr>`).join('');
+}
+
+function renderConfig(){
+  document.getElementById('config-version-rows').innerHTML = configVersions.map(c => `
+    <tr>
+      <td><span class="badge ${c.active?'badge-teal':'badge-neutral'}">${c.v}${c.active?' · active':''}</span></td>
+      <td>${c.by}</td>
+      <td style="color:var(--ink-faint);">${c.when}</td>
+      <td style="color:var(--ink-muted);">${c.note}</td>
+      <td><button class="btn btn-ghost btn-sm" onclick="toast('Viewing read-only snapshot of ${c.v}','success')">View</button></td>
+    </tr>`).join('');
+}
+
+function renderScheduler(){
+  document.getElementById('run-history-rows').innerHTML = runHistory.map(r => `
+    <tr>
+      <td class="mono">${r.id}</td>
+      <td>${r.trigger}</td>
+      <td>${r.status==='Succeeded' ? '<span class="badge badge-success">Succeeded</span>' : '<span class="badge badge-medium">Partial</span>'}</td>
+      <td>${r.turns.toLocaleString()}</td>
+      <td>${r.findings}</td>
+      <td class="mono">${r.cost}</td>
+    </tr>`).join('');
+}
+
+/* ======================================================================
+   NAV / VIEW SWITCHING
+   ====================================================================== */
+const viewTitles = {
+  dashboard:['Dashboard','Overview'],
+  queue:['Review queue','Prioritized, safety-first'],
+  turn:['Conversation review','Turn detail'],
+  recommendations:['Recommendations','Pending your approval'],
+  reports:['Reports','Failure patterns & trends'],
+  'admin-users':['Users & roles','Admin'],
+  'admin-config':['Audit configuration','Admin'],
+  'admin-scheduler':['Scheduler','Admin'],
+};
+
+function goView(name){
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById('view-'+name).classList.add('active');
+  document.querySelectorAll('.view').forEach(v => v.style.display = v.classList.contains('active') ? 'block' : 'none');
+
+  document.querySelectorAll('.rail-item').forEach(b => b.classList.remove('active'));
+  const navBtn = document.querySelector(`.rail-item[data-view="${name}"]`);
+  if(navBtn) navBtn.classList.add('active');
+  else if(name==='turn') document.querySelector('.rail-item[data-view="queue"]').classList.add('active');
+
+  const [title, crumb] = viewTitles[name] || ['',''];
+  document.getElementById('topbar-heading').textContent = title;
+  document.getElementById('topbar-crumb').textContent = crumb;
+
+  document.querySelector('.views').scrollTop = 0;
+}
+
+function setQueueFilter(chip){
+  document.querySelectorAll('#queue-filters .chip').forEach(c=>c.classList.remove('active'));
+  chip.classList.add('active');
+}
+function setRecFilter(chip){
+  document.querySelectorAll('#rec-filters .chip').forEach(c=>c.classList.remove('active'));
+  chip.classList.add('active');
+}
+
+/* ======================================================================
+   MODALS + TOASTS
+   ====================================================================== */
+function openModal(id){ document.getElementById('overlay-'+id).classList.remove('hidden'); }
+function closeModal(id){ document.getElementById('overlay-'+id).classList.add('hidden'); }
+
+function toast(msg, kind){
+  const t = el(`<div class="toast ${kind||''}">${msg}</div>`);
+  document.getElementById('toast-container').appendChild(t);
+  setTimeout(()=>{ t.style.opacity='0'; t.style.transition='opacity .25s'; setTimeout(()=>t.remove(),260); }, 3200);
+}
+
+function submitInvite(){
+  const name = document.getElementById('invite-name').value || 'New user';
+  const role = document.getElementById('invite-role').value;
+  users.unshift({name, email:document.getElementById('invite-email').value || 'pending@clinicchat.com', role, status:'Pending', last:'Never logged in'});
+  accessLog.unshift({when:'Just now', actor:'Dana Whitfield', change:`Invited ${name} as ${role}`});
+  renderUsers();
+  closeModal('modal-invite');
+  toast(`Invite sent to ${name} — role: ${role}`, 'success');
+}
+
+let currentDecisionCtx = null;
+function openDecisionModal(id, title, isSafety, recIdx){
+  currentDecisionCtx = {id, title, isSafety, recIdx};
+  document.getElementById('decision-title').textContent = isSafety ? 'Confirm safety-critical fix' : 'Review decision';
+  document.getElementById('decision-context').textContent = `${id} — ${title}`;
+  document.getElementById('decision-comment').value = '';
+  document.querySelectorAll('#decision-choice .chip').forEach((c,i)=>c.classList.toggle('active', i===0));
+  document.querySelectorAll('#decision-choice .chip').forEach(c => c.onclick = function(){
+    document.querySelectorAll('#decision-choice .chip').forEach(x=>x.classList.remove('active'));
+    this.classList.add('active');
+  });
+  openModal('modal-decision');
+}
+
+function submitDecision(){
+  const choice = document.querySelector('#decision-choice .chip.active').dataset.choice;
+  const comment = document.getElementById('decision-comment').value;
+  if(!comment.trim()){ toast('A comment is required for the audit trail','safety'); return; }
+
+  const ctx = currentDecisionCtx;
+  closeModal('modal-decision');
+
+  if(ctx.recIdx !== undefined && ctx.recIdx !== null){
+    const label = choice==='approve' ? 'Approved' : choice==='reject' ? 'Rejected' : 'Changes requested';
+    const badgeClass = choice==='approve' ? 'status-approved' : choice==='reject' ? 'status-rejected' : 'status-open';
+    const statusEl = document.getElementById('rec-status-'+ctx.recIdx);
+    if(statusEl){ statusEl.textContent = choice==='approve' ? 'Routed to CMS' : label; statusEl.className = 'status-tag ' + (choice==='approve' ? 'status-routed' : badgeClass); }
+    toast(choice==='approve' ? 'Approved — routed to Clinic Chat\'s content workflow' : label, choice==='approve'?'success':'');
+  } else {
+    const statusEl = document.getElementById('status-'+ctx.id);
+    if(statusEl){ statusEl.textContent = choice==='approve' ? 'Approved' : (choice==='reject'?'Rejected':'Changes requested'); statusEl.className = 'status-tag ' + (choice==='approve'?'status-approved':'status-open'); }
+    // remove from queue on approve
+    if(choice==='approve'){
+      const i = queueItems.findIndex(q=>q.id==='T-88213');
+      if(i>-1) queueItems.splice(i,1);
+      renderQueue();
+    }
+    toast(ctx.isSafety ? 'Safety fix approved — routed to developers & content review' : 'Decision recorded', 'success');
+  }
+}
+
+function saveConfigVersion(){
+  configVersions.forEach(c=>c.active=false);
+  configVersions.unshift({v:'v5', by:'Dana Whitfield', when:'Just now', note:'Updated from configuration screen', active:true});
+  renderConfig();
+  document.querySelector('.view-head .badge-teal').textContent = 'Active: v5';
+  toast('Saved as configuration v5 — takes effect on the next run', 'success');
+}
+
+function startManualRun(){
+  closeModal('modal-manual-run');
+  toast('Run RUN-2092 started — check Run history for progress', 'success');
+  runHistory.unshift({id:'RUN-2092', trigger:'Manual · D. Whitfield', status:'Succeeded', turns:412, findings:9, cost:'$0.95'});
+  renderScheduler();
+}
+
+function toggleSchedule(btn){
+  btn.classList.toggle('on');
+  toast(btn.classList.contains('on') ? 'Nightly schedule resumed' : 'Nightly schedule paused', 'success');
+}
+
+/* ======================================================================
+   AUTH
+   ====================================================================== */
+function showMfa(){
+  document.getElementById('login-step-1').classList.add('hidden');
+  document.getElementById('login-step-2').classList.remove('hidden');
+}
+function login(){
+  document.getElementById('login-screen').classList.add('hidden');
+  document.getElementById('app').classList.remove('hidden');
+  toast('Signed in as Dana Whitfield · Owner / Admin', 'success');
+}
+function logout(){
+  document.getElementById('app').classList.add('hidden');
+  document.getElementById('login-screen').classList.remove('hidden');
+  document.getElementById('login-step-1').classList.remove('hidden');
+  document.getElementById('login-step-2').classList.add('hidden');
+}
+
+/* ======================================================================
+   INIT
+   ====================================================================== */
+renderDashboard();
+renderQueue();
+renderRecommendations();
+renderReports();
+renderUsers();
+renderConfig();
+renderScheduler();
+goView('dashboard');
+</script>
+</body>
+</html>
