@@ -1,0 +1,64 @@
+version: 0.2
+ 
+env:
+  shell: bash
+  variables:
+    S3_BUCKET: "clinicchat-dev-s3-frontend-website"
+    CLOUDFRONT_DISTRIBUTION_ID: "EIB4QWPT1FYL1"
+ 
+phases:
+  install:
+    runtime-versions:
+      nodejs: 22
+    commands:
+      - echo "Installing dependencies..."
+      - node -v
+      - npm -v
+      - npm ci || npm install
+      
+  pre_build:
+    commands:
+      - |
+        echo "Selecting environment file..."
+
+        if [ -z "$APP_ENV" ]; then
+          echo "APP_ENV not set, defaulting to development"
+          APP_ENV=development
+        fi
+
+        ENV_FILE=".env.${APP_ENV}"
+
+        if [ ! -f "$ENV_FILE" ]; then
+          echo "ERROR: $ENV_FILE not found!"
+          exit 1
+        fi
+
+        echo "Using $ENV_FILE"
+        cp "$ENV_FILE" .env
+        
+        echo "Variables from .env file:"
+        grep -v '^#' .env | grep -v '^$'
+        
+        echo "Cleaning up other env files..."
+        rm -f .env.local .env.development .env.production
+        
+      - |
+ 
+  build:
+    commands:
+      - echo "Building frontend.."
+      - npm run build
+      - echo "Build output:"
+      - ls -la dist
+      - test -f dist/index.html
+ 
+  post_build:
+    commands:
+      - echo "Deploying ONLY latest build to S3 (delete old files)..."
+      - aws s3 sync dist/ "s3://${S3_BUCKET}" --delete
+ 
+      - echo "Setting no-cache headers for index.html..."
+      - aws s3 cp dist/index.html "s3://${S3_BUCKET}/index.html" --cache-control "no-cache, no-store, must-revalidate" --content-type "text/html"
+ 
+      - echo "Creating CloudFront invalidation..."
+      - aws cloudfront create-invalidation --distribution-id "${CLOUDFRONT_DISTRIBUTION_ID}" --paths "/*"
