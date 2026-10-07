@@ -166,7 +166,7 @@ function DrawerContent({
                       variant="outlined"
                       startIcon={<PersonOutlineIcon sx={{ fontSize: 15 }} />}
                       disabled={assignMutation.isPending}
-                      onClick={() => user && assignMutation.mutate({ findingId: finding.id, assignee: user.name })}
+                      onClick={() => user && assignMutation.mutate({ findingId: finding.id })}
                     >
                       {assignee ? `Assigned: ${assignee}` : 'Assign'}
                     </Button>

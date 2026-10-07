@@ -40,7 +40,7 @@ export function DashboardStats({ summary }: { summary: DashboardSummary }) {
 
       {/* Findings this period */}
       <StatCard
-        label={`Findings this period (${summary.periodDays}d)`}
+        label="Findings (all runs)"
         value={formatCount(summary.findingsThisPeriod)}
         foot={
           summary.safetyFindingsOpen > 0 ? (
@@ -91,7 +91,7 @@ function CostBurnCard({ runCost, cap, capHit }: { runCost: number; cap: number; 
         <Stack direction="row" sx={{ alignItems: 'baseline', gap: 0.5 }}>
           <Box component="span">{formatUsd(runCost)}</Box>
           <Typography component="span" sx={{ fontSize: 15, color: tokens.color.inkFaint, fontFamily: tokens.font.serif }}>
-            / {formatUsd(cap)}
+            {cap > 0 ? `/ ${formatUsd(cap)}` : '· no cap set'}
           </Typography>
         </Stack>
       }
@@ -125,7 +125,7 @@ function CostBurnCard({ runCost, cap, capHit }: { runCost: number; cap: number; 
               </Link>
             </Box>
           ) : (
-            `${Math.round(ratio * 100)}% of cap`
+            cap > 0 ? `${Math.round(ratio * 100)}% of cap` : 'Set max_usd_per_run in the audit configuration'
           )}
         </>
       }

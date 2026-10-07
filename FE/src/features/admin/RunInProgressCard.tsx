@@ -1,9 +1,5 @@
-import { Box, Button, Stack, Typography } from '@mui/material';
+import { Box, Stack, Typography } from '@mui/material';
 import MonitorHeartOutlinedIcon from '@mui/icons-material/MonitorHeartOutlined';
-import PauseOutlinedIcon from '@mui/icons-material/PauseOutlined';
-import PlayCircleOutlinedIcon from '@mui/icons-material/PlayCircleOutlined';
-import { usePauseRun, useResumeRun } from '@/api/mutations/scheduler';
-import { usePermission } from '@/auth/useAuth';
 import { tokens } from '@/theme/tokens';
 import { formatCount, formatDayTime } from '@/utils/format';
 import type { AuditRun } from '@/types/domain';
@@ -19,10 +15,6 @@ import type { AuditRun } from '@/types/domain';
  * STOP/escalation-miss findings, not a generic urgency indicator.
  */
 export function RunInProgressCard({ run }: { run: AuditRun }) {
-  const canManage = usePermission('manageAudit');
-  const pauseMutation = usePauseRun();
-  const resumeMutation = useResumeRun();
-
   if (!run.progress) return null;
   const { cleared, criticalOpen, pending, total } = run.progress;
   const percent = total > 0 ? Math.round((cleared / total) * 100) : 0;
@@ -65,8 +57,8 @@ export function RunInProgressCard({ run }: { run: AuditRun }) {
               {run.label ?? 'Audit batch'}
             </Typography>
             <Typography sx={{ fontSize: 12, color: tokens.color.inkMuted }}>
-              Started {formatDayTime(run.startedAt)}
-              {run.trigger === 'manual' && run.triggeredBy ? ` by ${run.triggeredBy}` : ' by scheduled workflow'}
+              Audit window from {formatDayTime(run.startedAt)}
+              {run.trigger === 'manual' ? ' · manual run' : ' · scheduled run'}
             </Typography>
           </Box>
         </Stack>
@@ -82,37 +74,12 @@ export function RunInProgressCard({ run }: { run: AuditRun }) {
             <Box sx={{ width: `${percent}%`, height: '100%', bgcolor: tokens.color.accent }} />
           </Box>
           <Stack direction="row" sx={{ gap: '14px', flexWrap: 'wrap' }}>
-            <Legend color={tokens.color.success} label={`${formatCount(cleared)} approved`} />
+            <Legend color={tokens.color.success} label={`${formatCount(cleared)} audited`} />
             <Legend color={tokens.color.safety} label={`${formatCount(criticalOpen)} critical`} />
             <Legend color={tokens.color.inkFaint} label={`${formatCount(pending)} pending`} />
           </Stack>
         </Box>
 
-        {canManage && (
-          <Box sx={{ flex: '0 0 auto' }}>
-            {isPaused ? (
-              <Button
-                size="small"
-                variant="outlined"
-                startIcon={<PlayCircleOutlinedIcon />}
-                disabled={resumeMutation.isPending}
-                onClick={() => resumeMutation.mutate(run.id)}
-              >
-                Resume run
-              </Button>
-            ) : (
-              <Button
-                size="small"
-                variant="outlined"
-                startIcon={<PauseOutlinedIcon />}
-                disabled={pauseMutation.isPending}
-                onClick={() => pauseMutation.mutate(run.id)}
-              >
-                Pause run
-              </Button>
-            )}
-          </Box>
-        )}
       </Stack>
     </Box>
   );

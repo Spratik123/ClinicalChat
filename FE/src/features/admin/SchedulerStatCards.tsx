@@ -1,14 +1,11 @@
-import { Box, Stack, Switch, Tooltip, Typography } from '@mui/material';
+import { Box, Stack, Tooltip, Typography } from '@mui/material';
 import EventOutlinedIcon from '@mui/icons-material/EventOutlined';
 import TimerOutlinedIcon from '@mui/icons-material/TimerOutlined';
-import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 import { Link as RouterLink } from 'react-router';
-import { useToggleSchedulerJob } from '@/api/mutations/scheduler';
 import { usePermission } from '@/auth/useAuth';
 import { tokens } from '@/theme/tokens';
-import { formatDayTime, formatDurationMinutes } from '@/utils/format';
+import { formatCount, formatDayTime } from '@/utils/format';
 import type { AuditRun, ScheduledJob } from '@/types/domain';
-import { computeAverageDuration } from './runStats';
 
 const cadenceLabels: Record<ScheduledJob['cadence'], string> = {
   nightly: 'Nightly',
@@ -18,8 +15,8 @@ const cadenceLabels: Record<ScheduledJob['cadence'], string> = {
 
 export function SchedulerStatCards({ job, runs }: { job: ScheduledJob; runs: AuditRun[] }) {
   const canManage = usePermission('manageAudit');
-  const toggleMutation = useToggleSchedulerJob();
-  const { avgMinutes, deltaMinutes } = computeAverageDuration(runs);
+  const finished = runs.filter((run) => run.status === 'succeeded' || run.status === 'partial');
+  const avgTurns = finished.length > 0 ? finished.reduce((sum, run) => sum + run.turnsAudited, 0) / finished.length : 0;
 
   return (
     <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: '14px', mb: '18px' }}>
@@ -43,23 +40,13 @@ export function SchedulerStatCards({ job, runs }: { job: ScheduledJob; runs: Aud
                 </>
               ) : (
                 <Typography sx={{ fontSize: 13, color: tokens.color.inkMuted, mt: '4px' }}>
-                  No run will start until this job is turned back on.
+                  {job.active ? `Schedule ${job.name} is enabled; the API does not report its next run time.` : 'No enabled schedule. Start a run manually.'}
                 </Typography>
               )}
             </Box>
           </Stack>
 
           <Stack direction="row" sx={{ alignItems: 'center', gap: '8px' }}>
-            {canManage && (
-              <Tooltip title={job.active ? 'Turn off the recurring schedule' : 'Turn the recurring schedule back on'}>
-                <Switch
-                  size="small"
-                  checked={job.active}
-                  disabled={toggleMutation.isPending}
-                  onChange={(event) => toggleMutation.mutate(event.target.checked)}
-                />
-              </Tooltip>
-            )}
             {canManage && (
               <Tooltip title="Audit configuration">
                 <Box component={RouterLink} to="/admin/configuration" sx={{ display: 'grid', placeItems: 'center', color: tokens.color.inkFaint }}>
@@ -71,28 +58,18 @@ export function SchedulerStatCards({ job, runs }: { job: ScheduledJob; runs: Aud
         </Stack>
       </Box>
 
-      {/* Average batch duration */}
+      {/* Average turns per run (the backend records no run start/finish times, so no duration) */}
       <Box sx={{ p: '16px 18px', border: `1px solid ${tokens.color.border}`, borderRadius: `${tokens.radius}px`, bgcolor: tokens.color.surface }}>
         <Stack direction="row" sx={{ gap: '12px' }}>
           <TimerOutlinedIcon sx={{ fontSize: 20, color: tokens.color.accent, mt: '2px' }} />
           <Box>
-            <Typography sx={{ fontSize: 11.5, color: tokens.color.inkFaint, mb: '2px' }}>Average batch duration</Typography>
+            <Typography sx={{ fontSize: 11.5, color: tokens.color.inkFaint, mb: '2px' }}>Average turns per run</Typography>
             <Typography sx={{ fontFamily: tokens.font.mono, fontSize: 17, fontWeight: 600 }}>
-              {formatDurationMinutes(avgMinutes)}
+              {finished.length > 0 ? formatCount(Math.round(avgTurns)) : '—'}
             </Typography>
-            {deltaMinutes !== null && (
-              <Stack direction="row" sx={{ alignItems: 'center', gap: '4px', mt: '2px' }}>
-                {deltaMinutes >= 0 ? (
-                  <TrendingDownIcon sx={{ fontSize: 14, color: tokens.color.success }} />
-                ) : null}
-                <Typography sx={{ fontSize: 11.5, color: deltaMinutes >= 0 ? tokens.color.success : tokens.color.high }}>
-                  {deltaMinutes >= 0
-                    ? `${formatDurationMinutes(Math.abs(deltaMinutes))} faster`
-                    : `${formatDurationMinutes(Math.abs(deltaMinutes))} slower`}
-                </Typography>
-                <Typography sx={{ fontSize: 11.5, color: tokens.color.inkFaint }}>than the prior runs</Typography>
-              </Stack>
-            )}
+            <Typography sx={{ fontSize: 11.5, color: tokens.color.inkFaint, mt: '2px' }}>
+              across {finished.length} finished run{finished.length === 1 ? '' : 's'}
+            </Typography>
           </Box>
         </Stack>
       </Box>

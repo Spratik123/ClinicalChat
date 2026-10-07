@@ -15,6 +15,8 @@ export const queryKeys = {
 
   queue: {
     all: ['queue'] as const,
+    /** Findings + runs + user directory every queue/dashboard/turn view derives from. */
+    source: ['queue', 'source'] as const,
     list: (filters: Record<string, unknown>) => ['queue', 'list', filters] as const,
     item: (findingId: string) => ['queue', 'item', findingId] as const,
   },

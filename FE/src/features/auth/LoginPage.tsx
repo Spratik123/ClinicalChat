@@ -36,7 +36,10 @@ export function LoginPage() {
     setSubmitting(true);
     try {
       await login(email, password);
-      navigate('/login/verify', { state: location.state });
+      // A first-time login moves auth into the set-password stage; send the user
+      // to that step. Otherwise the session is live and we continue on.
+      const from = (location.state as { from?: string } | null)?.from;
+      navigate(from ?? '/dashboard', { replace: true, state: location.state });
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Sign-in failed.');
     } finally {
@@ -136,7 +139,7 @@ export function LoginPage() {
           lineHeight: 1.6,
         }}
       >
-        Protected by MFA · Access is logged for HIPAA/SOC-2 compliance
+        Access is logged for HIPAA/SOC-2 compliance
       </Typography>
     </AuthLayout>
   );

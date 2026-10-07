@@ -131,6 +131,14 @@ export const findingTypeMeta: Record<FindingType, FindingTypeMeta> = {
     category: 'evidence_quality',
     proposedAction: 'Approve corrected verification rule and route to engineering',
   },
+  flow_misroute: {
+    label: 'Flow mis-route',
+    owner: 'engineering',
+    safetyCritical: false,
+    defaultSeverity: 'high',
+    category: 'conversation_flow',
+    proposedAction: 'Route the mis-routed flow to engineering for investigation',
+  },
   prompt_gap: {
     label: 'Prompt-change suggestion',
     owner: 'engineering',

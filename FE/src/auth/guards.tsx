@@ -26,7 +26,7 @@ export function RequireAuth() {
   const location = useLocation();
 
   if (stage === 'loading') return <FullPageSpinner />;
-  if (stage === 'awaiting_mfa') return <Navigate to="/login/verify" replace />;
+  if (stage === 'awaiting_new_password') return <Navigate to="/login/new-password" replace />;
   if (stage !== 'authenticated') {
     return <Navigate to="/login" replace state={{ from: location.pathname + location.search }} />;
   }

@@ -2,7 +2,7 @@ import { Box, Table, TableBody, TableCell, TableHead, TableRow, Typography } fro
 import { RunStatusChip } from '@/components/common/RunStatusChip';
 import { Mono } from '@/components/common/Mono';
 import { tokens } from '@/theme/tokens';
-import { formatCount, formatDateTime, formatUsd } from '@/utils/format';
+import { formatCount, formatDate, formatUsd } from '@/utils/format';
 import type { AuditRun } from '@/types/domain';
 
 /** Run history — every batch, scheduled or manual, with what it cost and found (CC-P1-002). */
@@ -12,7 +12,7 @@ export function RunHistoryTable({ runs }: { runs: AuditRun[] }) {
       <TableHead>
         <TableRow>
           <TableCell>Run</TableCell>
-          <TableCell>Started</TableCell>
+          <TableCell>Audit window</TableCell>
           <TableCell align="right">Turns</TableCell>
           <TableCell align="right">Findings</TableCell>
           <TableCell align="right">Cost</TableCell>
@@ -34,7 +34,9 @@ export function RunHistoryTable({ runs }: { runs: AuditRun[] }) {
               )}
             </TableCell>
             <TableCell>
-              <Box sx={{ fontSize: 13 }}>{formatDateTime(run.startedAt)}</Box>
+              <Box sx={{ fontSize: 13 }}>
+                {formatDate(run.startedAt)}{run.completedAt ? ` – ${formatDate(run.completedAt)}` : ''}
+              </Box>
             </TableCell>
             <TableCell align="right">
               <Mono>{formatCount(run.turnsAudited)}</Mono>

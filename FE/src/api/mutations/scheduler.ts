@@ -1,51 +1,33 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { api } from '@/api/client';
+import { auditRunsApi } from '@/api/backend/services';
+import type { TriggerAuditRunRequest } from '@/api/backend/types';
 import { queryKeys } from '@/api/queryKeys';
-import type { AuditRun, ScheduledJob } from '@/types/domain';
 
 function invalidateSchedulerAndRuns(queryClient: ReturnType<typeof useQueryClient>) {
   void queryClient.invalidateQueries({ queryKey: queryKeys.admin.scheduler });
   void queryClient.invalidateQueries({ queryKey: queryKeys.runs.all });
+  void queryClient.invalidateQueries({ queryKey: queryKeys.queue.all });
   void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.summary });
 }
 
-/** Pauses a running batch. Does not touch anything already decided in its findings — pausing only stops further engine processing. */
-export function usePauseRun() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (runId: string) => api.post<AuditRun>(`/runs/${runId}/pause`),
-    onSuccess: () => invalidateSchedulerAndRuns(queryClient),
-  });
-}
-
-export function useResumeRun() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (runId: string) => api.post<AuditRun>(`/runs/${runId}/resume`),
-    onSuccess: () => invalidateSchedulerAndRuns(queryClient),
-  });
-}
-
 /**
- * Starts an ad-hoc run (FR-ENG-001's manual-trigger path) using the currently
- * active audit configuration and its cost cap — the same governance a
- * scheduled run gets, not a separate ungoverned path.
+ * Starts an ad-hoc run (FR-ENG-001's manual-trigger path). The backend needs an
+ * explicit audit window and library when no schedule is named, and the run
+ * spends Bedrock budget up to the config's per-run cap.
  */
 export function useCreateRun() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: () => api.post<AuditRun>('/runs'),
+    mutationFn: (input: TriggerAuditRunRequest) => auditRunsApi.trigger(input),
     onSuccess: () => invalidateSchedulerAndRuns(queryClient),
   });
 }
 
-/** Turns the recurring nightly job on/off. Does not affect a batch already in progress. */
-export function useToggleSchedulerJob() {
+/** Retries the failed turns of a partial or failed run as a new linked run. */
+export function useRetryRun() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (active: boolean) => api.patch<ScheduledJob>('/admin/scheduler/job', { active }),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: queryKeys.admin.scheduler });
-    },
+    mutationFn: (runId: string) => auditRunsApi.retry(runId),
+    onSuccess: () => invalidateSchedulerAndRuns(queryClient),
   });
 }

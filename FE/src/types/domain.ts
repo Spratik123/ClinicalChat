@@ -208,7 +208,8 @@ export type FindingType =
   | 'survey_state_error'
   | 'document_extraction'
   | 'verification_rule_error'
-  | 'prompt_gap';
+  | 'prompt_gap'
+  | 'flow_misroute';
 
 /** Where a finding routes for action (CC-P1-019, OQ-05). */
 export type FindingOwner = 'safety' | 'content' | 'engineering';
@@ -465,8 +466,8 @@ export interface QueueBreakdown {
 export interface DashboardSummary {
   /** Null before the first audit run has completed. */
   lastRun: AuditRun | null;
+  /** Findings across every run the backend holds (it exposes no date window). */
   findingsThisPeriod: number;
-  periodDays: number;
   /** Open safety-critical findings. Drives the loudest element on the screen. */
   safetyFindingsOpen: number;
   queueDepth: number;

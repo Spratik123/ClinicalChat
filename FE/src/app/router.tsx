@@ -2,7 +2,7 @@ import { createBrowserRouter, Navigate } from 'react-router';
 import { AppShell } from '@/layouts/AppShell';
 import { RequireAnonymous, RequireAuth, RequirePermission } from '@/auth/guards';
 import { LoginPage } from '@/features/auth/LoginPage';
-import { MfaPage } from '@/features/auth/MfaPage';
+import { NewPasswordPage } from '@/features/auth/NewPasswordPage';
 import { ForgotPasswordPage } from '@/features/auth/ForgotPasswordPage';
 import { DashboardPage } from '@/features/dashboard/DashboardPage';
 import { QueuePage } from '@/features/queue/QueuePage';
@@ -27,7 +27,7 @@ export const router = createBrowserRouter([
     errorElement: <RouteErrorPage />,
     children: [
       { path: '/login', element: <LoginPage /> },
-      { path: '/login/verify', element: <MfaPage /> },
+      { path: '/login/new-password', element: <NewPasswordPage /> },
       { path: '/login/forgot', element: <ForgotPasswordPage /> },
     ],
   },

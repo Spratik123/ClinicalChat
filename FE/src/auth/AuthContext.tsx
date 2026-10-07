@@ -1,28 +1,32 @@
 import { createContext, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { api, setTokenProvider } from '@/api/client';
+import { ApiError, setTokenProvider, setUnauthorizedHandler } from '@/api/client';
+import { authApi, meApi } from '@/api/backend/services';
+import { toAuthUser } from '@/api/backend/mappers';
+import type { LoginResponse } from '@/api/backend/types';
 import type { AuthUser, Role } from '@/types/domain';
 
 /**
- * Auth state machine. MFA is mandatory for every staff account (BRD 11), so
- * `awaiting_mfa` is a first-class state rather than a modal on top of login.
+ * Auth state machine over Cognito (via the backend's /auth routes).
+ *
+ * An invited user signs in with a temporary password and Cognito answers with a
+ * NEW_PASSWORD_REQUIRED challenge instead of tokens, so `awaiting_new_password`
+ * is a first-class state rather than a modal on top of login.
  */
-export type AuthStage = 'loading' | 'anonymous' | 'awaiting_mfa' | 'authenticated';
+export type AuthStage = 'loading' | 'anonymous' | 'awaiting_new_password' | 'authenticated';
 
-interface LoginResult {
-  /** Opaque handle for the pending MFA challenge. */
-  challengeId: string;
-  /** Echoed back so the MFA screen can say who is signing in. */
-  name: string;
-  role: Role;
+interface NewPasswordChallenge {
+  email: string;
+  /** Opaque Cognito session handle, echoed back when the new password is set. */
+  session: string;
 }
 
 interface AuthContextValue {
   stage: AuthStage;
   user: AuthUser | null;
-  pending: LoginResult | null;
+  challenge: NewPasswordChallenge | null;
   login: (email: string, password: string) => Promise<void>;
-  verifyMfa: (code: string) => Promise<void>;
-  cancelMfa: () => void;
+  completeNewPassword: (newPassword: string) => Promise<void>;
+  cancelChallenge: () => void;
   logout: () => Promise<void>;
   /** Dev-only affordance for exercising the role guards without three accounts. */
   devSwitchRole: (role: Role) => void;
@@ -53,13 +57,28 @@ function writeStoredToken(token: string | null): void {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [stage, setStage] = useState<AuthStage>('loading');
   const [user, setUser] = useState<AuthUser | null>(null);
-  const [pending, setPending] = useState<LoginResult | null>(null);
+  const [challenge, setChallenge] = useState<NewPasswordChallenge | null>(null);
   const [token, setToken] = useState<string | null>(readStoredToken);
 
   // Hand the token to the api client without letting components import it.
   useEffect(() => {
     setTokenProvider(() => token);
   }, [token]);
+
+  const clearSession = useCallback(() => {
+    writeStoredToken(null);
+    setTokenProvider(() => null);
+    setToken(null);
+    setUser(null);
+    setChallenge(null);
+    setStage('anonymous');
+  }, []);
+
+  // Any 401 on an authenticated call (expired or revoked token) ends the session.
+  useEffect(() => {
+    setUnauthorizedHandler(clearSession);
+    return () => setUnauthorizedHandler(null);
+  }, [clearSession]);
 
   // Restore an existing session on first load.
   useEffect(() => {
@@ -71,19 +90,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     setTokenProvider(() => token);
-    api
-      .get<AuthUser>('/auth/session')
-      .then((session) => {
+    meApi
+      .get()
+      .then((me) => {
         if (cancelled) return;
-        setUser(session);
+        setUser(toAuthUser(me));
         setStage('authenticated');
       })
       .catch(() => {
         if (cancelled) return;
-        writeStoredToken(null);
-        setToken(null);
-        setUser(null);
-        setStage('anonymous');
+        clearSession();
       });
 
     return () => {
@@ -93,53 +109,80 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const login = useCallback(async (email: string, password: string) => {
-    const result = await api.post<LoginResult>('/auth/login', { email, password });
-    setPending(result);
-    setStage('awaiting_mfa');
+  /** Makes the new token visible to the client, loads the profile, then commits the session. */
+  const establishSession = useCallback(async (tokens: LoginResponse) => {
+    const accessToken = tokens.access_token;
+    if (!accessToken) throw new Error('Sign-in did not return a session. Please try again.');
+
+    // Set synchronously: the /me call below must carry the new token before
+    // React has re-rendered and the effect above has run.
+    setTokenProvider(() => accessToken);
+    try {
+      const me = await meApi.get();
+      writeStoredToken(accessToken);
+      setToken(accessToken);
+      setUser(toAuthUser(me));
+      setChallenge(null);
+      setStage('authenticated');
+    } catch (error) {
+      setTokenProvider(() => null);
+      throw error;
+    }
   }, []);
 
-  const verifyMfa = useCallback(
-    async (code: string) => {
-      if (!pending) throw new Error('No MFA challenge in progress.');
-      const result = await api.post<{ token: string; user: AuthUser }>('/auth/mfa', {
-        challengeId: pending.challengeId,
-        code,
-      });
-      writeStoredToken(result.token);
-      setToken(result.token);
-      setUser(result.user);
-      setPending(null);
-      setStage('authenticated');
+  const login = useCallback(
+    async (email: string, password: string) => {
+      const result = await authApi.login({ email, password });
+
+      if (result.challenge_name) {
+        if (result.challenge_name !== 'NEW_PASSWORD_REQUIRED' || !result.challenge_session) {
+          throw new Error(`Additional sign-in step "${result.challenge_name}" is not supported yet.`);
+        }
+        setChallenge({ email, session: result.challenge_session });
+        setStage('awaiting_new_password');
+        return;
+      }
+
+      await establishSession(result);
     },
-    [pending],
+    [establishSession],
   );
 
-  const cancelMfa = useCallback(() => {
-    setPending(null);
+  const completeNewPassword = useCallback(
+    async (newPassword: string) => {
+      if (!challenge) throw new Error('No sign-in in progress. Start again.');
+      const result = await authApi.completeNewPassword({
+        email: challenge.email,
+        new_password: newPassword,
+        session: challenge.session,
+      });
+      await establishSession(result);
+    },
+    [challenge, establishSession],
+  );
+
+  const cancelChallenge = useCallback(() => {
+    setChallenge(null);
     setStage('anonymous');
   }, []);
 
   const logout = useCallback(async () => {
     try {
-      await api.post('/auth/logout');
-    } catch {
-      /* Sign out locally regardless of what the server says. */
+      await authApi.logout();
+    } catch (error) {
+      // Sign out locally regardless of what the server says.
+      if (!(error instanceof ApiError)) console.warn('[auth] logout request failed', error);
     }
-    writeStoredToken(null);
-    setToken(null);
-    setUser(null);
-    setPending(null);
-    setStage('anonymous');
-  }, []);
+    clearSession();
+  }, [clearSession]);
 
   const devSwitchRole = useCallback((role: Role) => {
     setUser((current) => (current ? { ...current, role } : current));
   }, []);
 
   const value = useMemo<AuthContextValue>(
-    () => ({ stage, user, pending, login, verifyMfa, cancelMfa, logout, devSwitchRole }),
-    [stage, user, pending, login, verifyMfa, cancelMfa, logout, devSwitchRole],
+    () => ({ stage, user, challenge, login, completeNewPassword, cancelChallenge, logout, devSwitchRole }),
+    [stage, user, challenge, login, completeNewPassword, cancelChallenge, logout, devSwitchRole],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

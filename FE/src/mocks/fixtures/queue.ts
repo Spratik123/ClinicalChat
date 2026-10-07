@@ -21,6 +21,7 @@ const priorityReasons: Record<FindingType, string> = {
   picklist_mismatch: 'The menu did not contain an option for what the user asked.',
   survey_state_error: 'Survey left incomplete, which affects the verification outcome.',
   document_extraction: 'Source document was not readable, so the verification result is unreliable.',
+  flow_misroute: 'The flow chosen did not fit the request. Routes to engineering.',
   prompt_gap: 'Prompt wording is a likely cause of repeated misses.',
 };
 

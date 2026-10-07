@@ -23,7 +23,7 @@ export function UsersPage() {
     <>
       <PageHeader
         title="Users & roles"
-        description="Role-based access with mandatory MFA. Every access change is logged and retained per HIPAA/SOC-2."
+        description="Role-based access, granted by invitation. Every access change is logged and retained per HIPAA/SOC-2."
         actions={
           <Button size="small" variant="contained" startIcon={<PersonAddOutlinedIcon />} onClick={() => setInviteOpen(true)}>
             Invite user

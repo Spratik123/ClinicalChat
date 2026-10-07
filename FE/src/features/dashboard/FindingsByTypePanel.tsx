@@ -34,10 +34,8 @@ const ownerChipStyles = {
  */
 export function FindingsByTypePanel({
   rows,
-  periodDays,
 }: {
   rows: FindingTypeCount[];
-  periodDays: number;
 }) {
   const navigate = useNavigate();
 
@@ -53,7 +51,7 @@ export function FindingsByTypePanel({
   return (
     <Panel
       title="Findings by type"
-      subtitle={`Last ${periodDays} days · click a row to open the filtered queue`}
+      subtitle="All runs · click a row to open the filtered queue"
       flush
     >
       {ordered.length === 0 ? (

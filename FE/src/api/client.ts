@@ -32,6 +32,13 @@ export class ApiError extends Error {
  *  that components can reach directly. */
 let tokenProvider: () => string | null = () => null;
 
+/** Called on any 401 from an authenticated request so the auth provider can end the session. */
+let unauthorizedHandler: (() => void) | null = null;
+
+export function setUnauthorizedHandler(handler: (() => void) | null): void {
+  unauthorizedHandler = handler;
+}
+
 export function setTokenProvider(provider: () => string | null): void {
   tokenProvider = provider;
 }
@@ -57,6 +64,17 @@ function buildUrl(path: string, query?: RequestOptions['query']): string {
   return qs ? `${url}?${qs}` : url;
 }
 
+function formatDetail(detail: unknown): string | undefined {
+  if (typeof detail === 'string') return detail;
+  if (Array.isArray(detail)) {
+    const messages = detail
+      .map((item) => (typeof item === 'object' && item !== null ? (item as { msg?: unknown }).msg : undefined))
+      .filter((msg): msg is string => typeof msg === 'string');
+    return messages.length ? messages.join('; ') : undefined;
+  }
+  return undefined;
+}
+
 export async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const { method = 'GET', body, signal, query } = options;
 
@@ -79,15 +97,23 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
   const payload: unknown = isJson ? await response.json() : await response.text();
 
   if (!response.ok) {
-    const shape = payload as { message?: string; code?: string; detail?: unknown } | string;
+    // FastAPI errors are `{ detail, code?, request_id? }`; `detail` is a string
+    // for domain errors and an array of `{ msg, loc }` for 422 validation errors.
+    const shape = (typeof payload === 'object' && payload !== null ? payload : {}) as {
+      detail?: unknown;
+      message?: string;
+      code?: string;
+    };
     const message =
-      typeof shape === 'string' ? shape || response.statusText : (shape.message ?? response.statusText);
-    throw new ApiError(
-      response.status,
-      message,
-      typeof shape === 'object' ? shape.code : undefined,
-      typeof shape === 'object' ? shape.detail : undefined,
-    );
+      typeof payload === 'string'
+        ? payload || response.statusText
+        : formatDetail(shape.detail) ?? shape.message ?? response.statusText;
+
+    // A 401 on a request that carried a token means the session is gone. Login
+    // itself also returns 401 for bad credentials, but it sends no token.
+    if (response.status === 401 && token) unauthorizedHandler?.();
+
+    throw new ApiError(response.status, message, shape.code, shape.detail);
   }
 
   return payload as T;
@@ -98,6 +124,8 @@ export const api = {
     request<T>(path, { ...options, method: 'GET' }),
   post: <T>(path: string, body?: unknown, options?: Omit<RequestOptions, 'method' | 'body'>) =>
     request<T>(path, { ...options, method: 'POST', body }),
+  put: <T>(path: string, body?: unknown, options?: Omit<RequestOptions, 'method' | 'body'>) =>
+    request<T>(path, { ...options, method: 'PUT', body }),
   patch: <T>(path: string, body?: unknown, options?: Omit<RequestOptions, 'method' | 'body'>) =>
     request<T>(path, { ...options, method: 'PATCH', body }),
   delete: <T>(path: string, options?: Omit<RequestOptions, 'method' | 'body'>) =>

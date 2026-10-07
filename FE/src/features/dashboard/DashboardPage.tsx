@@ -73,7 +73,7 @@ export function DashboardPage() {
             >
               <Box sx={{ flex: { lg: '1.5 1 0' }, width: '100%', minWidth: 0 }}>
                 <QueryBoundary query={findingsQuery}>
-                  {(rows) => <FindingsByTypePanel rows={rows} periodDays={summary.periodDays} />}
+                  {(rows) => <FindingsByTypePanel rows={rows} />}
                 </QueryBoundary>
               </Box>
 
