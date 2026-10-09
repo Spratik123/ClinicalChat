@@ -9,7 +9,6 @@ import {
   IconButton,
   InputAdornment,
   Menu,
-  MenuItem,
   Stack,
   TextField,
   Tooltip,
@@ -23,7 +22,6 @@ import { useAppContext } from '@/api/queries/dashboard';
 import { roleLabels } from '@/auth/roles';
 import { env } from '@/config/env';
 import { tokens } from '@/theme/tokens';
-import type { Role } from '@/types/domain';
 
 interface TopBarProps {
   title: string;
@@ -31,10 +29,8 @@ interface TopBarProps {
   crumb?: string;
 }
 
-const devRoles: Role[] = ['owner_admin', 'content_reviewer', 'developer'];
-
 export function TopBar({ title, crumb }: TopBarProps) {
-  const { user, logout, devSwitchRole } = useAuth();
+  const { user, logout } = useAuth();
   const { data: context } = useAppContext();
   const navigate = useNavigate();
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
@@ -158,30 +154,6 @@ export function TopBar({ title, crumb }: TopBarProps) {
               {user ? roleLabels[user.role] : ''}
             </Typography>
           </Box>
-
-          {env.isDev && (
-            <>
-              <Divider />
-              <Typography
-                sx={{ px: 2, pt: 1, pb: 0.5, fontSize: 10.5, color: tokens.color.inkFaint, fontWeight: 600 }}
-              >
-                Dev — switch role
-              </Typography>
-              {devRoles.map((role) => (
-                <MenuItem
-                  key={role}
-                  selected={user?.role === role}
-                  onClick={() => {
-                    devSwitchRole(role);
-                    setAnchor(null);
-                  }}
-                  sx={{ fontSize: 13 }}
-                >
-                  {roleLabels[role]}
-                </MenuItem>
-              ))}
-            </>
-          )}
 
           <Divider />
           <Box sx={{ px: 2, py: 1 }}>

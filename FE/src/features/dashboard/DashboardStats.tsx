@@ -1,10 +1,11 @@
-import { Box, Link, Stack, Typography } from '@mui/material';
+import { Box, Link, Paper, Stack, Typography } from '@mui/material';
 import { Link as RouterLink } from 'react-router';
 import { StatCard } from '@/components/common/StatCard';
 import { Mono } from '@/components/common/Mono';
 import { tokens } from '@/theme/tokens';
-import { formatCount, formatTime, formatUsd } from '@/utils/format';
+import { formatCount, formatDateTime, formatUsd } from '@/utils/format';
 import type { DashboardSummary } from '@/types/domain';
+import { RunDetailBreakdowns, RunDetailStats } from '@/features/admin/RunDetailDialog';
 
 /**
  * The four dashboard counters from the prototype: last run, findings this
@@ -14,30 +15,50 @@ export function DashboardStats({ summary }: { summary: DashboardSummary }) {
   const { lastRun, queueBreakdown } = summary;
 
   return (
-    <Box
-      sx={{
-        display: 'grid',
-        gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', lg: 'repeat(4, 1fr)' },
-        gap: '14px',
-        mb: '18px',
-      }}
-    >
-      {/* Last run */}
-      <StatCard
-        label="Last run"
-        value={lastRun ? <Mono>{lastRun.id}</Mono> : '—'}
-        foot={
-          lastRun ? (
-            <>
-              {lastRun.status === 'partial' ? 'Partial' : 'Succeeded'} ·{' '}
-              {formatCount(lastRun.turnsAudited)} turns · {formatTime(lastRun.completedAt ?? lastRun.startedAt)}
-            </>
-          ) : (
-            'No completed run yet'
-          )
-        }
-      />
+    <>
+      {/* Part 1: the last run and its headline numbers. Part 2: the breakdowns. */}
+      <Box
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: { xs: '1fr', lg: 'repeat(2, minmax(0, 1fr))' },
+          gap: '14px',
+          mb: '14px',
+        }}
+      >
+        <Paper variant="outlined" sx={{ p: '16px 18px' }}>
+          <Typography sx={{ fontSize: 12, color: tokens.color.inkMuted, mb: '8px' }}>Last run</Typography>
+          <Box sx={{ fontFamily: tokens.font.serif, fontSize: 24, fontWeight: 600, lineHeight: 1.15, wordBreak: 'break-all' }}>
+            {lastRun ? <Mono>{lastRun.id}</Mono> : '—'}
+          </Box>
+          <Box sx={{ fontSize: 12, color: tokens.color.inkFaint, mt: '8px', mb: lastRun ? '16px' : 0 }}>
+            {lastRun ? (
+              <>
+                {lastRun.status === 'partial' ? 'Partial' : 'Succeeded'} · {formatCount(lastRun.turnsAudited)} turns ·{' '}
+                {formatDateTime(lastRun.completedAt ?? lastRun.startedAt)}
+              </>
+            ) : (
+              'No completed run yet'
+            )}
+          </Box>
+          {lastRun && <RunDetailStats runId={lastRun.id} showSpent={false} />}
+        </Paper>
 
+        {lastRun && (
+          <Paper variant="outlined" sx={{ p: '16px 18px' }}>
+            <Typography sx={{ fontSize: 12, color: tokens.color.inkMuted, mb: '12px' }}>Last run breakdown</Typography>
+            <RunDetailBreakdowns runId={lastRun.id} />
+          </Paper>
+        )}
+      </Box>
+
+      <Box
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', lg: 'repeat(3, 1fr)' },
+          gap: '14px',
+          mb: '18px',
+        }}
+      >
       {/* Findings this period */}
       <StatCard
         label="Findings (all runs)"
@@ -68,7 +89,8 @@ export function DashboardStats({ summary }: { summary: DashboardSummary }) {
 
       {/* Cost burn */}
       {lastRun ? <CostBurnCard runCost={lastRun.costUsd} cap={lastRun.costCapUsd} capHit={lastRun.capHit} /> : null}
-    </Box>
+      </Box>
+    </>
   );
 }
 

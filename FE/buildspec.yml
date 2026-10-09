@@ -22,8 +22,8 @@ phases:
         echo "Selecting environment file..."
 
         if [ -z "$APP_ENV" ]; then
-          echo "APP_ENV not set, defaulting to development"
-          APP_ENV=development
+          echo "APP_ENV not set, defaulting to dev"
+          APP_ENV=dev
         fi
 
         ENV_FILE=".env.${APP_ENV}"
@@ -40,7 +40,7 @@ phases:
         grep -v '^#' .env | grep -v '^$'
         
         echo "Cleaning up other env files..."
-        rm -f .env.local .env.development .env.production
+        rm -f .env.local .env.development .env.production .env.dev
         
       - |
  

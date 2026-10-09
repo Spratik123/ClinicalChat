@@ -84,3 +84,19 @@ export function useAssignToSelf() {
     },
   });
 }
+
+/** Assigns a finding to a specific reviewer — for admins and developers handing work out. */
+export function useAssignToReviewer() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ findingId, assigneeUserId }: { findingId: string; assigneeUserId: number }) => {
+      const { finding } = await findingsApi.get(findingId);
+      return findingsApi.assign(findingId, { assignee_user_id: assigneeUserId, expected_version: finding.version });
+    },
+
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.queue.all });
+    },
+  });
+}

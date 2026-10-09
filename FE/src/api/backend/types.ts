@@ -317,6 +317,8 @@ export interface AuditRunResponse {
   library_id?: Nullable<string>;
   library_snapshot_id?: Nullable<string>;
   retry_of_run_id?: Nullable<string>;
+  started_at?: Nullable<string>;
+  completed_at?: Nullable<string>;
   counts?: Record<string, number>;
 }
 

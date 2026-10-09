@@ -15,6 +15,7 @@ export interface ConfigDraft {
   dispatchMode: 'inline' | 'distributed';
   maxUsdPerRun: string;
   perMessageUsd: string;
+  stage1Share: string;
   lowConfidenceThreshold: string;
   /** USD per 1k tokens, for every model the draft uses. */
   prices: Record<string, { input: string; output: string }>;
@@ -41,6 +42,7 @@ export function toDraft(version: AuditConfigVersionResponse): ConfigDraft {
     dispatchMode: version.stage2_dispatch_mode === 'distributed' ? 'distributed' : 'inline',
     maxUsdPerRun: asString(version.cost_caps.max_usd_per_run),
     perMessageUsd: asString(version.cost_caps.per_message_usd),
+    stage1Share: asString(version.cost_caps.stage1_share_of_per_message),
     lowConfidenceThreshold: asString(version.thresholds.low_confidence_threshold),
     prices,
   };
@@ -78,11 +80,12 @@ export function toVersionBody(draft: ConfigDraft, base: AuditConfigVersionRespon
   let costCaps: Dict = { ...base.cost_caps };
   costCaps = withOptional(costCaps, 'max_usd_per_run', numberOrUndefined(draft.maxUsdPerRun));
   costCaps = withOptional(costCaps, 'per_message_usd', numberOrUndefined(draft.perMessageUsd));
+  costCaps = withOptional(costCaps, 'stage1_share_of_per_message', numberOrUndefined(draft.stage1Share));
 
   const priceTable: Dict = { ...(base.price_table as Dict) };
   for (const model of modelsInUse(draft)) {
     const price = draft.prices[model];
-    if (price) priceTable[model] = { input: price.input.trim(), output: price.output.trim() };
+    if (price && (price.input.trim() !== '' || price.output.trim() !== '')) priceTable[model] = { input: price.input.trim(), output: price.output.trim() };
   }
 
   return {
@@ -104,15 +107,23 @@ export function toVersionBody(draft: ConfigDraft, base: AuditConfigVersionRespon
 }
 
 /** Client-side checks for what the backend would otherwise reject with a 422. */
-export function validateDraft(draft: ConfigDraft): string | null {
+export function validateDraft(draft: ConfigDraft, options: { requirePrices?: boolean } = {}): string | null {
+  const { requirePrices = true } = options;
   if (!draft.modelPhase1.trim() || !draft.modelPhase2.trim()) return 'Both models are required.';
   for (const model of modelsInUse(draft)) {
     const price = draft.prices[model];
-    if (!price || price.input.trim() === '' || price.output.trim() === '') {
+    const input = price?.input.trim() ?? '';
+    const output = price?.output.trim() ?? '';
+    if (requirePrices && (input === '' || output === '')) {
       return `Set the input and output price for ${model} — an unpriced model fails after the Bedrock call is paid for.`;
+    }
+    if (!requirePrices && (input === '') !== (output === '')) {
+      return `Set both the input and output price for ${model}, or leave both empty.`;
     }
   }
   const temperature = numberOrUndefined(draft.temperature);
   if (temperature !== undefined && (temperature < 0 || temperature > 1)) return 'Temperature must be between 0 and 1.';
+  const share = numberOrUndefined(draft.stage1Share);
+  if (share !== undefined && (share < 0 || share > 1)) return 'Stage 1 share must be between 0 and 1.';
   return null;
 }

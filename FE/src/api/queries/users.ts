@@ -45,3 +45,24 @@ export function useAccessLog() {
     },
   });
 }
+
+export interface ReviewerOption {
+  id: number;
+  name: string;
+}
+
+/** Active content reviewers a finding can be assigned to. Only fetched when `enabled`. */
+export function useReviewers(enabled: boolean) {
+  return useQuery({
+    queryKey: [...queryKeys.admin.users, 'reviewers'],
+    enabled,
+    staleTime: 60_000,
+    queryFn: async (): Promise<ReviewerOption[]> => {
+      const result = await adminUsersApi.list({ role_code: 'CONTENT_REVIEWER', status: 'active', limit: PAGE_SIZE });
+      return result.items.map((user) => ({
+        id: user.user_id,
+        name: user.display_name || user.username || user.email || `User #${user.user_id}`,
+      }));
+    },
+  });
+}

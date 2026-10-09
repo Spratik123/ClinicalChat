@@ -22,6 +22,8 @@ export const permissions = {
   resolveSafetyFinding: ['owner_admin', 'content_reviewer'],
   /** See engineering-routed findings (genuine AI misses) and the raw trace. */
   viewEngineeringFindings: ['owner_admin', 'developer'],
+  /** Hand a finding to any content reviewer, not just yourself. */
+  assignReviews: ['owner_admin', 'developer'],
   /** Read the review queue and turn detail. */
   reviewConversations: ['owner_admin', 'content_reviewer', 'developer'],
   /** Read reporting. */

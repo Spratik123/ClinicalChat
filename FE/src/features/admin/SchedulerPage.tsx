@@ -38,7 +38,7 @@ export function SchedulerPage() {
               startIcon={<AddOutlinedIcon />}
               onClick={() => setScheduleDialogOpen(true)}
             >
-              Schedule a run
+              Start Run
             </Button>
           ) : undefined
         }

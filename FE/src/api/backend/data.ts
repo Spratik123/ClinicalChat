@@ -26,7 +26,7 @@ export async function fetchAllFindings(): Promise<FindingResponse[]> {
 /** `GET /audit-runs` likewise requires a status, so query each. Newest window first. */
 export async function fetchAllRuns(limit = 100): Promise<AuditRunResponse[]> {
   const results = await Promise.all(RUN_STATUSES.map((status) => auditRunsApi.list({ status, limit })));
-  return results.flatMap((result) => result.runs).sort((a, b) => Date.parse(b.window_until) - Date.parse(a.window_until));
+  return results.flatMap((result) => result.runs).sort((a, b) => Date.parse(b.completed_at ?? b.window_until) - Date.parse(a.completed_at ?? a.window_until));
 }
 
 export function toRunLookup(runs: AuditRunResponse[]): RunLookup {

@@ -267,9 +267,10 @@ export function toAuditRun(run: AuditRunResponse, extras: RunExtras = {}): Audit
     costUsd,
     costCapUsd,
     capHit: costCapUsd > 0 && costUsd >= costCapUsd,
-    // The backend records neither start nor finish times, only the audited window.
-    startedAt: run.window_since,
-    completedAt: terminal ? run.window_until : null,
+
+     // Real execution times when the backend provides them; the audited window otherwise.
+    startedAt: run.started_at ?? run.window_since,
+    completedAt: terminal ? (run.completed_at ?? run.window_until) : null,
     configVersion: run.config_version_number,
     progress:
       status === 'running' || status === 'queued'

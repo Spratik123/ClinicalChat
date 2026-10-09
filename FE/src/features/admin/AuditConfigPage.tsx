@@ -227,7 +227,6 @@ function ConfigForm({ configId, versions }: { configId: string; versions: AuditC
       <Panel title="Batch & generation">
         <Stack direction="row" sx={{ gap: 2, flexWrap: 'wrap' }}>
           <Field label="Batch size" value={draft.batchSize} onChange={(value) => set('batchSize', value)} />
-          <Field label="Max tokens" value={draft.maxTokens} onChange={(value) => set('maxTokens', value)} />
           <Field label="Temperature (0–1)" value={draft.temperature} onChange={(value) => set('temperature', value)} />
           <Field
             label="Max tool iterations"

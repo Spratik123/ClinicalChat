@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import {
   Alert,
+  Box,
+  Divider,
   Button,
   Dialog,
   DialogActions,
@@ -8,6 +10,8 @@ import {
   DialogTitle,
   IconButton,
   MenuItem,
+  ToggleButton,
+  ToggleButtonGroup,
   Stack,
   TextField,
   Typography,
@@ -33,11 +37,12 @@ const BLANK: ConfigDraft = {
   promptVersion: '',
   temperature: '',
   maxTokens: '',
-  batchSize: '',
+  batchSize: '20',
   maxToolIterations: '',
   dispatchMode: 'inline',
-  maxUsdPerRun: '',
-  perMessageUsd: '',
+  maxUsdPerRun: '25',
+  perMessageUsd: '0.01',
+  stage1Share: '0.4',
   lowConfidenceThreshold: '',
   prices: {},
 };
@@ -91,7 +96,7 @@ export function NewConfigDialog({ open, onClose, onCreated }: NewConfigDialogPro
       .catch((error: unknown) => setLoadError(error instanceof Error ? error.message : 'Could not load that configuration.'));
   };
 
-  const problem = !name.trim() ? 'Give the configuration a name.' : validateDraft(draft);
+  const problem = !name.trim() ? 'Give the configuration a name.' : validateDraft(draft, { requirePrices: false });
 
   const handleCreate = () => {
     // With no source there is no base version, so start from an empty one.
@@ -165,6 +170,82 @@ export function NewConfigDialog({ open, onClose, onCreated }: NewConfigDialogPro
             onChange={(event) => set('modelPhase2', event.target.value)}
             required
           />
+
+          <TextField
+            label="Prompt version"
+            size="small"
+            value={draft.promptVersion}
+            onChange={(event) => set('promptVersion', event.target.value)}
+          />
+          <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1.5 }}>
+            <TextField
+              fullWidth
+              label="Temperature"
+              size="small"
+              type="number"
+              value={draft.temperature}
+              onChange={(event) => set('temperature', event.target.value)}
+              slotProps={{ htmlInput: { min: 0, max: 1, step: 0.1 } }}
+            />
+            <TextField
+              fullWidth
+              label="Batch size"
+              size="small"
+              type="number"
+              value={draft.batchSize}
+              onChange={(event) => set('batchSize', event.target.value)}
+              slotProps={{ htmlInput: { min: 1 } }}
+            />
+          </Box>
+
+          <Divider />
+
+          <Stack sx={{ gap: 0.75 }}>
+            <Typography sx={{ fontSize: 12, fontWeight: 600, color: tokens.color.inkMuted, textTransform: 'uppercase', letterSpacing: 0.4 }}>Phase 2 dispatch</Typography>
+            <ToggleButtonGroup
+              exclusive
+              fullWidth
+              size="small"
+              value={draft.dispatchMode}
+              onChange={(_, value: ConfigDraft['dispatchMode'] | null) => value && set('dispatchMode', value)}
+            >
+              <ToggleButton value="inline">Inline</ToggleButton>
+              <ToggleButton value="distributed">Distributed</ToggleButton>
+            </ToggleButtonGroup>
+          </Stack>
+
+          <Stack sx={{ gap: 1 }}>
+            <Typography sx={{ fontSize: 12, fontWeight: 600, color: tokens.color.inkMuted, textTransform: 'uppercase', letterSpacing: 0.4 }}>Cost caps (USD)</Typography>
+            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1.5 }}>
+              <TextField
+                fullWidth
+                label="Max per run"
+                size="small"
+                type="number"
+                value={draft.maxUsdPerRun}
+                onChange={(event) => set('maxUsdPerRun', event.target.value)}
+                slotProps={{ htmlInput: { min: 0, step: 0.01 } }}
+              />
+              <TextField
+                fullWidth
+                label="Per message"
+                size="small"
+                type="number"
+                value={draft.perMessageUsd}
+                onChange={(event) => set('perMessageUsd', event.target.value)}
+                slotProps={{ htmlInput: { min: 0, step: 0.001 } }}
+              />
+              <TextField
+                fullWidth
+                label="Stage 1 share"
+                size="small"
+                type="number"
+                value={draft.stage1Share}
+                onChange={(event) => set('stage1Share', event.target.value)}
+                slotProps={{ htmlInput: { min: 0, max: 1, step: 0.05 } }}
+              />
+            </Box>
+          </Stack>
 
           {modelsInUse(draft).map((model) => {
             const price = draft.prices[model] ?? { input: '', output: '' };

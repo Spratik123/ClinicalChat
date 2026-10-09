@@ -8,7 +8,9 @@ import {
   Chip,
   Drawer,
   IconButton,
+  MenuItem,
   Stack,
+  TextField,
   Typography,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
@@ -19,7 +21,8 @@ import SmartToyOutlinedIcon from '@mui/icons-material/SmartToyOutlined';
 import SettingsSuggestOutlinedIcon from '@mui/icons-material/SettingsSuggestOutlined';
 import { Link as RouterLink } from 'react-router';
 import { useTurn, useQueueItem } from '@/api/queries/queue';
-import { useAssignToSelf } from '@/api/mutations/review';
+import { useAssignToReviewer, useAssignToSelf } from '@/api/mutations/review';
+import { useReviewers } from '@/api/queries/users';
 import { useAuth, usePermission } from '@/auth/useAuth';
 import { QueryBoundary } from '@/components/common/QueryBoundary';
 import { SeverityBadge } from '@/components/common/SeverityBadge';
@@ -86,6 +89,11 @@ function DrawerContent({
 
   const [dialogDecision, setDialogDecision] = useState<DecisionKind | null>(null);
   const assignMutation = useAssignToSelf();
+  const assignToReviewer = useAssignToReviewer();
+  const canAssignOthers = usePermission('assignReviews');
+  const reviewersQuery = useReviewers(canAssignOthers);
+  const reviewers = reviewersQuery.data ?? [];
+  const currentAssignee = reviewers.find((reviewer) => reviewer.name === assignee)?.id;
 
   const meta = finding ? findingTypeMeta[finding.type] : undefined;
   const canDecide = usePermission(finding?.severity === 'safety' ? 'resolveSafetyFinding' : 'approveContentChange');
@@ -158,7 +166,33 @@ function DrawerContent({
                 </Button>
 
                 <Box sx={{ ml: 'auto' }}>
-                  {isAssignedToMe ? (
+                  {canAssignOthers ? (
+                    <TextField
+                      select
+                      size="small"
+                      label="Assign to"
+                      value={currentAssignee ?? ''}
+                      disabled={assignToReviewer.isPending || reviewersQuery.isPending}
+                      error={reviewersQuery.isError || assignToReviewer.isError}
+                      helperText={
+                        reviewersQuery.isError
+                          ? 'Could not load reviewers.'
+                          : assignToReviewer.isError
+                            ? 'Could not assign.'
+                            : undefined
+                      }
+                      onChange={(event) =>
+                        assignToReviewer.mutate({ findingId: finding.id, assigneeUserId: Number(event.target.value) })
+                      }
+                      sx={{ minWidth: 180 }}
+                    >
+                      {reviewers.map((reviewer) => (
+                        <MenuItem key={reviewer.id} value={reviewer.id} sx={{ fontSize: 13 }}>
+                          {reviewer.name}
+                        </MenuItem>
+                      ))}
+                    </TextField>
+                  ) : isAssignedToMe ? (
                     <Chip size="small" icon={<PersonOutlineIcon sx={{ fontSize: 15 }} />} label="Assigned to you" sx={{ bgcolor: tokens.color.surface, border: `1px solid ${tokens.color.border}` }} />
                   ) : (
                     <Button

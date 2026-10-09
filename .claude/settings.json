@@ -27,7 +27,8 @@
       "Bash(export U=pramesh@futransolutions.com P='Ramesh@1234' VITE_API_BASE_URL=http://clinicchat-dev-alb-808006053.us-east-1.elb.amazonaws.com/python)",
       "Bash(timeout 150 npx --yes vite-node smoke.test.ts)",
       "Bash(curl -s -X PATCH -H 'Authorization: Bearer __TRACKED_VAR__' -H 'content-type: application/json' -d '{\"display_name\":null}' http://clinicchat-dev-alb-808006053.us-east-1.elb.amazonaws.com/python/me)",
-      "Bash(sed -i \"s#@mui/icons-material/CheckCircleOutline'#@mui/icons-material/CheckCircleOutlined'#; s#import CheckCircleOutlineIcon#import CheckCircleOutlineIcon#\" src/features/auth/ForgotPasswordPage.tsx)"
+      "Bash(sed -i \"s#@mui/icons-material/CheckCircleOutline'#@mui/icons-material/CheckCircleOutlined'#; s#import CheckCircleOutlineIcon#import CheckCircleOutlineIcon#\" src/features/auth/ForgotPasswordPage.tsx)",
+      "Bash(git check-ignore *)"
     ]
   }
 }

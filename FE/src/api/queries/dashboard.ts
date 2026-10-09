@@ -36,7 +36,7 @@ export function useDashboardSummary() {
 
       const lastRaw = [...source.runs.values()]
         .filter((run) => FINISHED.has(run.status))
-        .sort((a, b) => Date.parse(b.window_until) - Date.parse(a.window_until))[0];
+        .sort((a, b) => Date.parse(b.completed_at ?? b.window_until) - Date.parse(a.completed_at ?? a.window_until))[0];
 
       let lastRun: AuditRun | null = null;
       if (lastRaw) {
