@@ -62,7 +62,7 @@ interface SideRailProps {
 export function SideRail({ queueDepth, safetyOpen = 0, reviewContext }: SideRailProps) {
   const { user } = useAuth();
   const { pathname } = useLocation();
-  const canManage = usePermission('manageAudit') || usePermission('manageUsers');
+  const canManage = usePermission('viewAuditConfig') || usePermission('viewAuditRuns') || usePermission('manageUsers');
 
   return (
     <Box
@@ -162,7 +162,7 @@ export function SideRail({ queueDepth, safetyOpen = 0, reviewContext }: SideRail
           sections below (review context, settings, profile) off-screen. */}
       <Box component="nav" aria-label="Main navigation" sx={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
         {navGroups.map((group, groupIndex) => {
-          const visible = group.items.filter((item) => can(user?.role, item.permission));
+          const visible = group.items.filter((item) => can(user, item.permission));
           if (visible.length === 0) return null;
 
           return (

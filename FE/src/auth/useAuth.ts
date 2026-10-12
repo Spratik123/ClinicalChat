@@ -11,5 +11,5 @@ export function useAuth() {
 /** `const canApprove = usePermission('approveContentChange')` */
 export function usePermission(permission: Permission): boolean {
   const { user } = useAuth();
-  return can(user?.role, permission);
+  return can(user, permission);
 }

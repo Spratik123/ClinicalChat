@@ -46,7 +46,7 @@ export function OnboardingCard({ steps }: { steps: OnboardingStep[] }) {
       >
         {ordered.map((step, index) => {
           const meta = onboardingStepMeta[step.id];
-          const showAction = can(user?.role, meta.permission);
+          const showAction = can(user, meta.permission);
           const isLast = index === ordered.length - 1;
 
           return (

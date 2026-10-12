@@ -30,6 +30,7 @@ export const queryKeys = {
     all: ['runs'] as const,
     list: ['runs', 'list'] as const,
     detail: (runId: string) => ['runs', 'detail', runId] as const,
+    progress: (runId: string) => ['runs', 'progress', runId] as const,
   },
 
   recommendations: {

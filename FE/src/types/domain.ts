@@ -27,6 +27,8 @@ export interface AuthUser {
   name: string;
   email: string;
   role: Role;
+  /** Backend permission codes from `GET /me`; the UI gates controls on these. */
+  permissions?: string[];
 }
 
 export type UserStatus = 'active' | 'pending' | 'deactivated';

@@ -14,7 +14,7 @@ const cadenceLabels: Record<ScheduledJob['cadence'], string> = {
 };
 
 export function SchedulerStatCards({ job, runs }: { job: ScheduledJob; runs: AuditRun[] }) {
-  const canManage = usePermission('manageAudit');
+  const canManage = usePermission('viewAuditConfig');
   const finished = runs.filter((run) => run.status === 'succeeded' || run.status === 'partial');
   const avgTurns = finished.length > 0 ? finished.reduce((sum, run) => sum + run.turnsAudited, 0) / finished.length : 0;
 

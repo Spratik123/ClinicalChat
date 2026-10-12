@@ -24,7 +24,7 @@ export const onboardingStepMeta: Record<OnboardingStepId, OnboardingStepMeta> = 
     title: 'Set audit configuration',
     actionLabel: 'Review settings',
     to: '/admin/configuration',
-    permission: 'manageAudit',
+    permission: 'viewAuditConfig',
   },
   work_queue: {
     title: 'Work the review queue',

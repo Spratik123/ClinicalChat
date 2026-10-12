@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { auditRunsApi } from '@/api/backend/services';
-import type { TriggerAuditRunRequest } from '@/api/backend/types';
+import type { BudgetApprovalRequest, TriggerAuditRunRequest } from '@/api/backend/types';
 import { queryKeys } from '@/api/queryKeys';
 
 function invalidateSchedulerAndRuns(queryClient: ReturnType<typeof useQueryClient>) {
@@ -20,6 +20,20 @@ export function useCreateRun() {
   return useMutation({
     mutationFn: (input: TriggerAuditRunRequest) => auditRunsApi.trigger(input),
     onSuccess: () => invalidateSchedulerAndRuns(queryClient),
+  });
+}
+
+/** Approves or declines a held run's spend past the per-message cap. */
+export function useBudgetApproval(runId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: BudgetApprovalRequest) => auditRunsApi.budgetApproval(runId, input),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.runs.progress(runId) });
+      invalidateSchedulerAndRuns(queryClient);
+    },
+    // A 409 means the run's state moved on (already decided / not waiting); re-read it.
+    onError: () => void queryClient.invalidateQueries({ queryKey: queryKeys.runs.progress(runId) }),
   });
 }
 

@@ -49,6 +49,6 @@ export function RequireAnonymous() {
  */
 export function RequirePermission({ permission }: { permission: Permission }) {
   const { user } = useAuth();
-  if (!can(user?.role, permission)) return <Navigate to="/403" replace />;
+  if (!can(user, permission)) return <Navigate to="/403" replace />;
   return <Outlet />;
 }

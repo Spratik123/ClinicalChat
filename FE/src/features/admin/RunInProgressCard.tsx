@@ -1,5 +1,12 @@
-import { Box, Stack, Typography } from '@mui/material';
+import { useState } from 'react';
+import { ApiError } from '@/api/client';
+import { Box, Button, Stack, TextField, Typography } from '@mui/material';
 import MonitorHeartOutlinedIcon from '@mui/icons-material/MonitorHeartOutlined';
+import type { BudgetApprovalRequest, BudgetApprovalResponse } from '@/api/backend/types';
+import { useBudgetApproval } from '@/api/mutations/scheduler';
+import { useRunProgress } from '@/api/queries/runProgress';
+import { usePermission } from '@/auth/useAuth';
+import { useUiStore } from '@/stores/uiStore';
 import { tokens } from '@/theme/tokens';
 import { formatCount, formatDayTime } from '@/utils/format';
 import type { AuditRun } from '@/types/domain';
@@ -15,10 +22,23 @@ import type { AuditRun } from '@/types/domain';
  * STOP/escalation-miss findings, not a generic urgency indicator.
  */
 export function RunInProgressCard({ run }: { run: AuditRun }) {
-  if (!run.progress) return null;
-  const { cleared, criticalOpen, pending, total } = run.progress;
-  const percent = total > 0 ? Math.round((cleared / total) * 100) : 0;
+  const live = useRunProgress(run.id).data;
+  if (!run.progress && !live) return null;
+
+  const fallback = run.progress ?? { cleared: 0, criticalOpen: 0, pending: 0, total: 0 };
+  const total = live?.turns_total ?? fallback.total;
+  const cleared = live?.turns_processed ?? fallback.cleared;
+  const pending = live ? Math.max(0, total - cleared) : fallback.pending;
+  const criticalOpen = fallback.criticalOpen;
+  const percent = live
+    ? Math.min(100, Math.max(0, Math.round(live.percent_complete)))
+    : total > 0
+      ? Math.round((cleared / total) * 100)
+      : 0;
   const isPaused = run.status === 'paused';
+  const approval = live?.budget_approval;
+  const decision = approval?.decision?.toLowerCase();
+  const approvalPending = live?.phase === 'awaiting_budget_approval' && !!approval && !decision;
 
   return (
     <Box
@@ -81,6 +101,81 @@ export function RunInProgressCard({ run }: { run: AuditRun }) {
         </Box>
 
       </Stack>
+
+      {approval && approvalPending && <BudgetApprovalPanel runId={run.id} approval={approval} />}
+    </Box>
+  );
+}
+
+/** Maps the budget-approval failure modes (README: 409 not waiting, 422 bad amount) to plain messages. */
+function describeApprovalError(error: unknown): string {
+  if (error instanceof ApiError) {
+    if (error.status === 409) {
+      return 'This run is no longer waiting for a budget decision — it may already be decided or still processing.';
+    }
+    if (error.status === 422) return 'Enter a maximum additional amount greater than $0 to approve.';
+    if (error.isForbidden) return 'You do not have permission to decide this run’s budget.';
+  }
+  return 'Could not record the budget decision. Please try again.';
+}
+
+/** Spend past the per-message cap is held until an admin approves (with a ceiling) or declines. */
+function BudgetApprovalPanel({ runId, approval }: { runId: string; approval: BudgetApprovalResponse }) {
+  const canManage = usePermission('triggerAuditRun');
+  const pushToast = useUiStore((state) => state.pushToast);
+  const mutation = useBudgetApproval(runId);
+  const projected = Number(approval.projected_additional_usd);
+  const [maxAdditional, setMaxAdditional] = useState(() =>
+    Number.isFinite(projected) && projected > 0 ? String(Math.ceil(projected * 100) / 100) : '1',
+  );
+  const amount = Number(maxAdditional);
+  const validAmount = Number.isFinite(amount) && amount > 0;
+
+  const submit = (decision: BudgetApprovalRequest['decision']) =>
+    mutation.mutate(
+      decision === 'approve' ? { decision, max_additional_usd: amount } : { decision },
+      {
+        onSuccess: () => pushToast(decision === 'approve' ? 'Extra spend approved' : 'Extra spend declined', 'success'),
+        onError: (error) => pushToast(describeApprovalError(error), 'safety'),
+      },
+    );
+
+  return (
+    <Box sx={{ mt: '16px', pt: '14px', borderTop: `1px solid ${tokens.color.accentTintBorder}` }}>
+      <Typography sx={{ fontSize: 13, fontWeight: 700, mb: '2px' }}>Budget approval needed</Typography>
+      <Typography sx={{ fontSize: 12.5, color: tokens.color.inkMuted, mb: '10px' }}>
+        {formatCount(approval.held_turns)} conversation{approval.held_turns === 1 ? ' is' : 's are'} held past the
+        per-message cap
+        {Number.isFinite(projected) ? ` — projected additional spend about $${projected.toFixed(2)}.` : '.'}
+      </Typography>
+      {canManage ? (
+        <Stack direction="row" sx={{ gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+          <TextField
+            size="small"
+            type="number"
+            label="Max additional (USD)"
+            value={maxAdditional}
+            onChange={(event) => setMaxAdditional(event.target.value)}
+            slotProps={{ htmlInput: { min: 0, step: 0.5 } }}
+            sx={{ width: 190 }}
+          />
+          <Button
+            size="small"
+            variant="contained"
+            disabled={!validAmount || mutation.isPending}
+            onClick={() => submit('approve')}
+          >
+            Approve
+          </Button>
+          <Button size="small" variant="outlined" disabled={mutation.isPending} onClick={() => submit('decline')}>
+            Decline
+          </Button>
+        </Stack>
+      ) : (
+        <Typography sx={{ fontSize: 12, color: tokens.color.inkMuted }}>
+          An Owner / Admin must approve or decline this.
+        </Typography>
+      )}
     </Box>
   );
 }

@@ -1,5 +1,5 @@
-import { createContext, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { ApiError, setTokenProvider, setUnauthorizedHandler } from '@/api/client';
+import { createContext, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { ApiError, setRefreshHandler, setTokenProvider, setUnauthorizedHandler } from '@/api/client';
 import { authApi, meApi } from '@/api/backend/services';
 import { toAuthUser } from '@/api/backend/mappers';
 import type { LoginResponse } from '@/api/backend/types';
@@ -35,6 +35,7 @@ interface AuthContextValue {
 export const AuthContext = createContext<AuthContextValue | null>(null);
 
 const TOKEN_STORAGE_KEY = 'cc_audit_token';
+const REFRESH_STORAGE_KEY = 'cc_audit_refresh_token';
 
 /** sessionStorage, not localStorage: a closed tab should end the session. */
 function readStoredToken(): string | null {
@@ -54,6 +55,23 @@ function writeStoredToken(token: string | null): void {
   }
 }
 
+function readStoredRefreshToken(): string | null {
+  try {
+    return sessionStorage.getItem(REFRESH_STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function writeStoredRefreshToken(token: string | null): void {
+  try {
+    if (token) sessionStorage.setItem(REFRESH_STORAGE_KEY, token);
+    else sessionStorage.removeItem(REFRESH_STORAGE_KEY);
+  } catch {
+    /* Storage unavailable — see writeStoredToken. */
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [stage, setStage] = useState<AuthStage>('loading');
   const [user, setUser] = useState<AuthUser | null>(null);
@@ -65,8 +83,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setTokenProvider(() => token);
   }, [token]);
 
+  const refreshTokenRef = useRef<string | null>(readStoredRefreshToken());
+  const refreshInFlight = useRef<Promise<string | null> | null>(null);
+
   const clearSession = useCallback(() => {
     writeStoredToken(null);
+    writeStoredRefreshToken(null);
+    refreshTokenRef.current = null;
     setTokenProvider(() => null);
     setToken(null);
     setUser(null);
@@ -79,6 +102,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUnauthorizedHandler(clearSession);
     return () => setUnauthorizedHandler(null);
   }, [clearSession]);
+
+  // Renew the access token from the refresh token. Concurrent 401s share one
+  // request, since Cognito may rotate the refresh token on use.
+  const refreshSession = useCallback((): Promise<string | null> => {
+    const refreshToken = refreshTokenRef.current;
+    if (!refreshToken) return Promise.resolve(null);
+    if (refreshInFlight.current) return refreshInFlight.current;
+
+    const pending = authApi
+      .refresh({ refresh_token: refreshToken })
+      .then((result) => {
+        const accessToken = result.access_token;
+        if (!accessToken) return null;
+        if (result.refresh_token) {
+          refreshTokenRef.current = result.refresh_token;
+          writeStoredRefreshToken(result.refresh_token);
+        }
+        setTokenProvider(() => accessToken);
+        writeStoredToken(accessToken);
+        setToken(accessToken);
+        return accessToken;
+      })
+      .catch(() => null)
+      .finally(() => {
+        refreshInFlight.current = null;
+      });
+    refreshInFlight.current = pending;
+    return pending;
+  }, []);
+
+  useEffect(() => {
+    setRefreshHandler(refreshSession);
+    return () => setRefreshHandler(null);
+  }, [refreshSession]);
 
   // Restore an existing session on first load.
   useEffect(() => {
@@ -120,6 +177,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const me = await meApi.get();
       writeStoredToken(accessToken);
+      refreshTokenRef.current = tokens.refresh_token ?? null;
+      writeStoredRefreshToken(refreshTokenRef.current);
       setToken(accessToken);
       setUser(toAuthUser(me));
       setChallenge(null);
@@ -177,7 +236,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [clearSession]);
 
   const devSwitchRole = useCallback((role: Role) => {
-    setUser((current) => (current ? { ...current, role } : current));
+    setUser((current) => (current ? { ...current, role, permissions: undefined } : current));
   }, []);
 
   const value = useMemo<AuthContextValue>(

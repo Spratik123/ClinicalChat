@@ -26,6 +26,7 @@ import { useAuditConfigs, useConfigVersions } from '@/api/queries/auditConfig';
 import { useSaveConfigVersion } from '@/api/mutations/auditConfig';
 import { modelsInUse, toDraft, toVersionBody, validateDraft, type ConfigDraft } from '@/api/backend/configMappers';
 import type { AuditConfigResponse, AuditConfigVersionResponse } from '@/api/backend/types';
+import { usePermission } from '@/auth/useAuth';
 import { useUiStore } from '@/stores/uiStore';
 import { tokens } from '@/theme/tokens';
 import { NewConfigDialog } from './NewConfigDialog';
@@ -40,6 +41,7 @@ export function AuditConfigPage() {
   const configsQuery = useAuditConfigs();
   const [configId, setConfigId] = useState<string | undefined>();
   const [newOpen, setNewOpen] = useState(false);
+  const canUpdate = usePermission('updateAuditConfig');
 
   return (
     <>
@@ -47,9 +49,11 @@ export function AuditConfigPage() {
         title="Audit configuration"
         description="Versioned settings for the batch audit. Saving creates a new version — configuration itself is auditable."
         actions={
-          <Button size="small" variant="outlined" startIcon={<AddOutlinedIcon />} onClick={() => setNewOpen(true)}>
-            New configuration
-          </Button>
+          canUpdate ? (
+            <Button size="small" variant="outlined" startIcon={<AddOutlinedIcon />} onClick={() => setNewOpen(true)}>
+              New configuration
+            </Button>
+          ) : undefined
         }
       />
 
@@ -123,6 +127,7 @@ function ConfigForm({ configId, versions }: { configId: string; versions: AuditC
   const [draft, setDraft] = useState<ConfigDraft>(baseline);
   const mutation = useSaveConfigVersion(configId);
   const pushToast = useUiStore((state) => state.pushToast);
+  const canUpdate = usePermission('updateAuditConfig');
 
   // A freshly saved version becomes the new baseline.
   useEffect(() => {
@@ -142,6 +147,12 @@ function ConfigForm({ configId, versions }: { configId: string; versions: AuditC
 
   return (
     <>
+      {!canUpdate && (
+        <Alert severity="info" sx={{ mb: '14px' }}>
+          You have read-only access to the audit configuration.
+        </Alert>
+      )}
+      {canUpdate && (
       <Stack
         direction="row"
         sx={{ alignItems: 'center', justifyContent: 'space-between', mb: '14px', gap: 2, flexWrap: 'wrap' }}
@@ -174,7 +185,10 @@ function ConfigForm({ configId, versions }: { configId: string; versions: AuditC
           </Button>
         </Stack>
       </Stack>
+      )}
 
+      {/* A disabled fieldset makes every input and toggle inside read-only. */}
+      <Box component="fieldset" disabled={!canUpdate} sx={{ border: 0, p: 0, m: 0, minWidth: 0 }}>
       <Panel title="Models">
         <Stack sx={{ gap: 2 }}>
           <Field
@@ -267,7 +281,12 @@ function ConfigForm({ configId, versions }: { configId: string; versions: AuditC
         </Stack>
       </Panel>
 
-      <VersionHistory versions={versions} onRestore={(version) => setDraft(toDraft(version))} />
+      </Box>
+
+      <VersionHistory
+        versions={versions}
+        onRestore={canUpdate ? (version) => setDraft(toDraft(version)) : undefined}
+      />
     </>
   );
 }
@@ -308,7 +327,7 @@ function VersionHistory({
   onRestore,
 }: {
   versions: AuditConfigVersionResponse[];
-  onRestore: (version: AuditConfigVersionResponse) => void;
+  onRestore?: (version: AuditConfigVersionResponse) => void;
 }) {
   const currentNumber = versions[0]?.version_number;
 
@@ -348,7 +367,7 @@ function VersionHistory({
                 <Typography sx={{ fontSize: 13 }}>{version.stage2_dispatch_mode}</Typography>
               </TableCell>
               <TableCell>
-                {version.version_number !== currentNumber && (
+                {onRestore && version.version_number !== currentNumber && (
                   <Button size="small" variant="text" onClick={() => onRestore(version)}>
                     Restore
                   </Button>

@@ -10,7 +10,7 @@ import { formatCount } from '@/utils/format';
 import type { AuditRun } from '@/types/domain';
 
 export function RecentRunsPanel({ runs }: { runs: AuditRun[] }) {
-  const canManage = usePermission('manageAudit');
+  const canManage = usePermission('viewAuditRuns');
 
   return (
     <Panel

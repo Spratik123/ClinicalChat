@@ -70,7 +70,7 @@ export const navGroups: NavGroup[] = [
         label: 'Audit configuration',
         to: '/admin/configuration',
         icon: 'config',
-        permission: 'manageAudit',
+        permission: 'viewAuditConfig',
       },
       {
         // BRD/code name is "Scheduler"; relabelled to "Audit runs" per the
@@ -78,7 +78,7 @@ export const navGroups: NavGroup[] = [
         label: 'Audit runs',
         to: '/admin/scheduler',
         icon: 'scheduler',
-        permission: 'manageAudit',
+        permission: 'viewAuditRuns',
       },
     ],
   },

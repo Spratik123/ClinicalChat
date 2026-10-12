@@ -63,11 +63,13 @@ export const router = createBrowserRouter([
           },
 
           {
-            element: <RequirePermission permission="manageAudit" />,
-            children: [
-              { path: 'admin/configuration', element: <AuditConfigPage /> },
-              { path: 'admin/scheduler', element: <SchedulerPage /> },
-            ],
+            element: <RequirePermission permission="viewAuditConfig" />,
+            children: [{ path: 'admin/configuration', element: <AuditConfigPage /> }],
+          },
+
+          {
+            element: <RequirePermission permission="viewAuditRuns" />,
+            children: [{ path: 'admin/scheduler', element: <SchedulerPage /> }],
           },
 
           { path: '403', element: <ForbiddenPage /> },

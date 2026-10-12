@@ -35,6 +35,10 @@ export interface LoginResponse {
   challenge_session?: Nullable<string>;
 }
 
+export interface RefreshTokenRequest {
+  refresh_token: string;
+}
+
 export interface NewPasswordChallengeRequest {
   email: string;
   new_password: string;
@@ -320,6 +324,48 @@ export interface AuditRunResponse {
   started_at?: Nullable<string>;
   completed_at?: Nullable<string>;
   counts?: Record<string, number>;
+}
+
+/** `GET /audit-runs/{run_id}/progress`. Decimal amounts arrive as strings. */
+export interface AuditRunProgressResponse {
+  run_id: number | string;
+  status: BackendRunStatus;
+  phase: string;
+  done: boolean;
+  turns_total: number;
+  turns_processed: number;
+  percent_complete: number;
+  stage1: { completed: number; failed: number; skipped: number; pending: number };
+  stage2: {
+    required: number;
+    done: number;
+    failed: number;
+    skipped_budget: number;
+    pending: number;
+    awaiting_approval: number;
+  };
+  spent_usd: string;
+  started_at?: Nullable<string>;
+  completed_at?: Nullable<string>;
+  budget_approval?: Nullable<BudgetApprovalResponse>;
+}
+
+/** The run's budget-approval state; also the body returned by the budget-approval POST. */
+export interface BudgetApprovalResponse {
+  held_turns: number;
+  projected_additional_usd: string;
+  decision?: Nullable<string>;
+  decided_by_user_id?: Nullable<number>;
+  decided_at?: Nullable<string>;
+  max_additional_usd?: Nullable<string>;
+  run_cap_usd?: Nullable<string>;
+}
+
+/** `POST /audit-runs/{run_id}/budget-approval` — approve or decline a held run's spend past the per-message cap. */
+export interface BudgetApprovalRequest {
+  decision: 'approve' | 'decline';
+  /** Required when approving: the most extra spend (USD) the run may take on. */
+  max_additional_usd?: number;
 }
 
 export interface TriggerAuditRunResponse extends AuditRunResponse {

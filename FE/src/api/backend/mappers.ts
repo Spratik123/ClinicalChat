@@ -55,6 +55,7 @@ export function toAuthUser(user: CurrentUserResponse): AuthUser {
     name: displayName(user),
     email: user.email ?? user.username ?? '',
     role: toRole(user.roles),
+    permissions: user.permissions,
   };
 }
 

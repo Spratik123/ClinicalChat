@@ -21,7 +21,7 @@ const COLLAPSED_HISTORY_COUNT = 4;
  */
 export function SchedulerPage() {
   const schedulerQuery = useScheduler();
-  const canManage = usePermission('manageAudit');
+  const canManage = usePermission('triggerAuditRun');
   const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
   const [showFullHistory, setShowFullHistory] = useState(false);
 
@@ -46,7 +46,7 @@ export function SchedulerPage() {
 
       <QueryBoundary query={schedulerQuery}>
         {({ job, runs }) => {
-          const inProgress = runs.find((run) => run.status === 'running' || run.status === 'paused');
+          const inProgress = runs.find((run) => run.status === 'queued' || run.status === 'running' || run.status === 'paused');
           const visibleRuns = showFullHistory ? runs : runs.slice(0, COLLAPSED_HISTORY_COUNT);
 
           return (

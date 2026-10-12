@@ -43,6 +43,16 @@ export function setTokenProvider(provider: () => string | null): void {
   tokenProvider = provider;
 }
 
+/**
+ * Exchanges the refresh token for a new access token; resolves null when the
+ * session cannot be renewed. Set by the auth provider, which owns the tokens.
+ */
+let refreshHandler: (() => Promise<string | null>) | null = null;
+
+export function setRefreshHandler(handler: (() => Promise<string | null>) | null): void {
+  refreshHandler = handler;
+}
+
 interface RequestOptions {
   method?: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';
   body?: unknown;
@@ -75,7 +85,7 @@ function formatDetail(detail: unknown): string | undefined {
   return undefined;
 }
 
-export async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
+export async function request<T>(path: string, options: RequestOptions = {}, retried = false): Promise<T> {
   const { method = 'GET', body, signal, query } = options;
 
   const headers: Record<string, string> = { Accept: 'application/json' };
@@ -83,6 +93,7 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
 
   const token = tokenProvider();
   if (token) headers.Authorization = `Bearer ${token}`;
+  const isAuthRoute = path.startsWith('/auth/');
 
   const response = await fetch(buildUrl(path, query), {
     method,
@@ -90,6 +101,12 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
     signal,
     ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
   });
+
+  // An expired access token: renew it once and replay the request before giving up.
+  if (response.status === 401 && token && !isAuthRoute && !retried && refreshHandler) {
+    const renewed = await refreshHandler();
+    if (renewed) return request<T>(path, options, true);
+  }
 
   if (response.status === 204) return undefined as T;
 
@@ -111,7 +128,7 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
 
     // A 401 on a request that carried a token means the session is gone. Login
     // itself also returns 401 for bad credentials, but it sends no token.
-    if (response.status === 401 && token) unauthorizedHandler?.();
+    if (response.status === 401 && token && !isAuthRoute) unauthorizedHandler?.();
 
     throw new ApiError(response.status, message, shape.code, shape.detail);
   }

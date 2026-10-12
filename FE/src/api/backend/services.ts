@@ -5,11 +5,14 @@ import type {
   AuditConfigResponse,
   AuditConfigSetupResponse,
   AuditConfigVersionResponse,
+  AuditRunProgressResponse,
   AuditRunResponse,
   AuditScheduleResponse,
   BackendRoleCode,
   BackendRunStatus,
   BackendUserStatus,
+  BudgetApprovalRequest,
+  BudgetApprovalResponse,
   ChangePasswordRequest,
   ConfirmForgotPasswordRequest,
   CreateAuditConfigRequest,
@@ -36,6 +39,7 @@ import type {
   PermissionResponse,
   PullWindowRequest,
   ReduceRunFindingsResponse,
+  RefreshTokenRequest,
   ReviewFindingRequest,
   RoleAssignmentHistoryResponse,
   RoleResponse,
@@ -69,6 +73,8 @@ export const authApi = {
   login: (body: LoginRequest) => api.post<LoginResponse>('/auth/login', body),
   completeNewPassword: (body: NewPasswordChallengeRequest) =>
     api.post<LoginResponse>('/auth/challenge/new-password', body),
+  /** `refresh_token` in the response is null unless Cognito rotated it. */
+  refresh: (body: RefreshTokenRequest) => api.post<LoginResponse>('/auth/refresh', body),
   logout: () => api.post<void>('/auth/logout'),
   /** Always 202 with the same body, so it cannot be used to probe which emails have accounts. */
   forgotPassword: (body: ForgotPasswordRequest) => api.post<ForgotPasswordResponse>('/auth/forgot-password', body),
@@ -143,6 +149,9 @@ export const auditRunsApi = {
   list: (params: { status?: BackendRunStatus; limit?: number } = {}) =>
     api.get<ListAuditRunsResponse>('/audit-runs', { query: params }),
   get: (runId: string) => api.get<AuditRunResponse>(`/audit-runs/${enc(runId)}`),
+  progress: (runId: string) => api.get<AuditRunProgressResponse>(`/audit-runs/${enc(runId)}/progress`),
+  budgetApproval: (runId: string, body: BudgetApprovalRequest) =>
+    api.post<BudgetApprovalResponse>(`/audit-runs/${enc(runId)}/budget-approval`, body),
   retry: (runId: string) => api.post<TriggerAuditRunResponse>(`/audit-runs/${enc(runId)}/retry`),
   screen: (runId: string, body: ScreenAuditRunRequest = {}) =>
     api.post<ScreenAuditRunResponse>(`/audit-runs/${enc(runId)}/screen`, body),
