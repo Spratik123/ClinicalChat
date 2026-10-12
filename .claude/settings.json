@@ -29,7 +29,10 @@
       "Bash(curl -s -X PATCH -H 'Authorization: Bearer __TRACKED_VAR__' -H 'content-type: application/json' -d '{\"display_name\":null}' http://clinicchat-dev-alb-808006053.us-east-1.elb.amazonaws.com/python/me)",
       "Bash(sed -i \"s#@mui/icons-material/CheckCircleOutline'#@mui/icons-material/CheckCircleOutlined'#; s#import CheckCircleOutlineIcon#import CheckCircleOutlineIcon#\" src/features/auth/ForgotPasswordPage.tsx)",
       "Bash(git check-ignore *)",
-      "Bash(npx eslint *)"
+      "Bash(npx eslint *)",
+      "Bash(git fetch *)",
+      "Bash(git ls-remote *)",
+      "Bash(git push *)"
     ]
   }
 }
